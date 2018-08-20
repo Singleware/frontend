@@ -4,7 +4,7 @@ import { Input } from './input';
 import { Output } from './output';
 import { Settings } from './settings';
 /**
- * Front-end main application class.
+ * Frontend main application class.
  */
 export declare class Main extends Application.Main<Input, Output> {
     /**
@@ -16,13 +16,13 @@ export declare class Main extends Application.Main<Input, Output> {
      * @param match Matched routes.
      * @param callback Handler callback.
      */
-    protected filter(match: Application.Match<Input, Output>, callback: Callable): Promise<void>;
+    protected filterHandler(match: Application.Match<Input, Output>, callback: Callable): Promise<void>;
     /**
      * Process event handler.
      * @param match Matched routes.
      * @param callback Handler callback.
      */
-    protected process(match: Application.Match<Input, Output>, callback: Callable): Promise<void>;
+    protected processHandler(match: Application.Match<Input, Output>, callback: Callable): Promise<void>;
     /**
      * Default constructor.
      * @param settings Application settings.

@@ -6,6 +6,4 @@
 /**
  * Application input interface.
  */
-export interface Input {
-
-}
+export interface Input {}

@@ -12,7 +12,7 @@ import { Output } from './output';
 import { Settings } from './settings';
 
 /**
- * Front-end main application class.
+ * Frontend main application class.
  */
 @Class.Describe()
 export class Main extends Application.Main<Input, Output> {
@@ -28,10 +28,19 @@ export class Main extends Application.Main<Input, Output> {
    * @param callback Handler callback.
    */
   @Class.Protected()
-  protected async filter(match: Application.Match<Input, Output>, callback: Callable): Promise<void> {
-    await super.filter(match, callback);
-    if (match.length === 0 && match.detail.granted) {
-      history.pushState(match.variables.state, match.variables.title, match.detail.path);
+  protected async filterHandler(match: Application.Match<Input, Output>, callback: Callable): Promise<void> {
+    await super.filterHandler(match, callback);
+    if (match.detail.granted) {
+      let title;
+      if (this.settings.title) {
+        title = this.settings.title.text;
+        if (match.variables.title) {
+          title = `${title}${this.settings.title.separator || ' '}${match.variables.title}`;
+        }
+      } else {
+        title = match.variables.title;
+      }
+      history.pushState(match.variables.state, title, match.detail.path);
     }
   }
 
@@ -41,9 +50,9 @@ export class Main extends Application.Main<Input, Output> {
    * @param callback Handler callback.
    */
   @Class.Protected()
-  protected async process(match: Application.Match<Input, Output>, callback: Callable): Promise<void> {
+  protected async processHandler(match: Application.Match<Input, Output>, callback: Callable): Promise<void> {
     const output = match.detail.output;
-    await super.process(match, callback);
+    await super.processHandler(match, callback);
     if (match.length === 0 && match.detail.granted) {
       if (output.title) {
         document.title = output.title;

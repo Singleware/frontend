@@ -7,10 +7,10 @@ export { Input } from './input';
 export { Output } from './output';
 
 import * as ServicesModule from './services';
-export const Services = ServicesModule;
+export import Services = ServicesModule;
 
 import * as MainModule from './main';
-export const Main = MainModule.Main;
+export import Main = MainModule.Main;
 
 // Aliases
 export const Filter = (<any>MainModule).Main.Filter;

@@ -14,7 +14,7 @@ const Class = require("@singleware/class");
 const Application = require("@singleware/application");
 const DOM = require("@singleware/jsx");
 /**
- * Front-end main application class.
+ * Frontend main application class.
  */
 let Main = class Main extends Application.Main {
     /**
@@ -33,10 +33,20 @@ let Main = class Main extends Application.Main {
      * @param match Matched routes.
      * @param callback Handler callback.
      */
-    async filter(match, callback) {
-        await super.filter(match, callback);
-        if (match.length === 0 && match.detail.granted) {
-            history.pushState(match.variables.state, match.variables.title, match.detail.path);
+    async filterHandler(match, callback) {
+        await super.filterHandler(match, callback);
+        if (match.detail.granted) {
+            let title;
+            if (this.settings.title) {
+                title = this.settings.title.text;
+                if (match.variables.title) {
+                    title = `${title}${this.settings.title.separator || ' '}${match.variables.title}`;
+                }
+            }
+            else {
+                title = match.variables.title;
+            }
+            history.pushState(match.variables.state, title, match.detail.path);
         }
     }
     /**
@@ -44,9 +54,9 @@ let Main = class Main extends Application.Main {
      * @param match Matched routes.
      * @param callback Handler callback.
      */
-    async process(match, callback) {
+    async processHandler(match, callback) {
         const output = match.detail.output;
-        await super.process(match, callback);
+        await super.processHandler(match, callback);
         if (match.length === 0 && match.detail.granted) {
             if (output.title) {
                 document.title = output.title;
@@ -62,10 +72,10 @@ __decorate([
 ], Main.prototype, "settings", void 0);
 __decorate([
     Class.Protected()
-], Main.prototype, "filter", null);
+], Main.prototype, "filterHandler", null);
 __decorate([
     Class.Protected()
-], Main.prototype, "process", null);
+], Main.prototype, "processHandler", null);
 Main = __decorate([
     Class.Describe()
 ], Main);

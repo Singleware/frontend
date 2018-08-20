@@ -2,18 +2,17 @@
  * Copyright (C) 2018 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
-import { Title } from './title';
 
 /**
- * Application settings.
+ * Application title settings.
  */
-export interface Settings {
+export interface Title {
   /**
-   * Main title.
+   * Title text.
    */
-  title?: Title;
+  text?: string;
   /**
-   * Body element.
+   * Title separator.
    */
-  body?: HTMLElement;
+  separator?: string;
 }
