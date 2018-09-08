@@ -12,11 +12,11 @@ export declare class Main extends Application.Main<Input, Output> {
      */
     private settings;
     /**
-     * Filter event handler.
-     * @param match Matched routes.
-     * @param callback Handler callback.
+     * Get formatted application title based on the application settings.
+     * @param subtitle Subtitle of the current page.
+     * @returns Returns the formatted title or undefined when there is no title to be set.
      */
-    protected filterHandler(match: Application.Match<Input, Output>, callback: Callable): Promise<void>;
+    private formatTitle;
     /**
      * Process event handler.
      * @param match Matched routes.

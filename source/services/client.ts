@@ -5,6 +5,7 @@
 import * as Class from '@singleware/class';
 import * as Observable from '@singleware/observable';
 import * as Application from '@singleware/application';
+import * as Path from '@singleware/path';
 
 import { Settings } from './settings';
 import { Input } from '../input';
@@ -16,9 +17,16 @@ import { Output } from '../output';
 @Class.Describe()
 export class Client implements Application.Service<Input, Output> {
   /**
+   * Current opened path.
+   */
+  @Class.Private()
+  private opened: string = '';
+
+  /**
    * Service settings.
    */
-  @Class.Private() private settings: Settings;
+  @Class.Private()
+  private settings: Settings;
 
   /**
    * Service events.
@@ -26,7 +34,8 @@ export class Client implements Application.Service<Input, Output> {
   @Class.Private()
   private events = {
     receive: new Observable.Subject<Application.Request<Input, Output>>(),
-    send: new Observable.Subject<Application.Request<Input, Output>>()
+    send: new Observable.Subject<Application.Request<Input, Output>>(),
+    error: new Observable.Subject<Application.Request<Input, Output>>()
   };
 
   /**
@@ -35,6 +44,14 @@ export class Client implements Application.Service<Input, Output> {
    */
   constructor(settings: Settings) {
     this.settings = settings;
+  }
+
+  /**
+   * Current opened path.
+   */
+  @Class.Public()
+  public get path(): string {
+    return this.opened;
   }
 
   /**
@@ -54,16 +71,19 @@ export class Client implements Application.Service<Input, Output> {
   }
 
   /**
+   * Error response event.
+   */
+  @Class.Public()
+  public get onError(): Observable.Subject<Application.Request<Input, Output>> {
+    return this.events.error;
+  }
+
+  /**
    * Starts the service.
    */
   @Class.Public()
   public start(): void {
-    this.events.receive.notifyAll({
-      path: this.settings.path || location.pathname,
-      input: {},
-      output: {},
-      environment: {}
-    });
+    this.open(this.settings.path || location.pathname);
   }
 
   /**
@@ -71,4 +91,18 @@ export class Client implements Application.Service<Input, Output> {
    */
   @Class.Public()
   public stop(): void {}
+
+  /**
+   * Opens the specified path.
+   * @param path Path to be opened.
+   */
+  @Class.Public()
+  public open(path: string): void {
+    this.events.receive.notifyAll({
+      path: (this.opened = Path.resolve(Path.dirname(this.path), path)),
+      input: {},
+      output: {},
+      environment: {}
+    });
+  }
 }

@@ -8,6 +8,10 @@ import { Output } from '../output';
  */
 export declare class Client implements Application.Service<Input, Output> {
     /**
+     * Current opened path.
+     */
+    private opened;
+    /**
      * Service settings.
      */
     private settings;
@@ -21,6 +25,10 @@ export declare class Client implements Application.Service<Input, Output> {
      */
     constructor(settings: Settings);
     /**
+     * Current opened path.
+     */
+    readonly path: string;
+    /**
      * Receive request event.
      */
     readonly onReceive: Observable.Subject<Application.Request<Input, Output>>;
@@ -29,6 +37,10 @@ export declare class Client implements Application.Service<Input, Output> {
      */
     readonly onSend: Observable.Subject<Application.Request<Input, Output>>;
     /**
+     * Error response event.
+     */
+    readonly onError: Observable.Subject<Application.Request<Input, Output>>;
+    /**
      * Starts the service.
      */
     start(): void;
@@ -36,4 +48,9 @@ export declare class Client implements Application.Service<Input, Output> {
      * Stops the service.
      */
     stop(): void;
+    /**
+     * Opens the specified path.
+     * @param path Path to be opened.
+     */
+    open(path: string): void;
 }

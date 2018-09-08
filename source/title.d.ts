@@ -8,6 +8,10 @@
  */
 export interface Title {
   /**
+   * Determines whether the title is prefixed or not.
+   */
+  prefix?: boolean;
+  /**
    * Title text.
    */
   text?: string;

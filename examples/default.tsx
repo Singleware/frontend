@@ -22,7 +22,7 @@ export class Default {
   @Application.Processor({ path: '/' })
   public async defaultProcessor(match: Frontend.Match): Promise<void> {
     const output = match.detail.output;
-    output.title = 'Example';
+    output.subtitle = 'Example';
     output.content = <h1>It's working</h1>;
   }
 }

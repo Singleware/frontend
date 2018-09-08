@@ -25,7 +25,7 @@ let Default = class Default {
      */
     async defaultProcessor(match) {
         const output = match.detail.output;
-        output.title = 'Example';
+        output.subtitle = 'Example';
         output.content = DOM.create("h1", null, "It's working");
     }
 };

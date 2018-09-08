@@ -29,25 +29,21 @@ let Main = class Main extends Application.Main {
         this.settings = settings;
     }
     /**
-     * Filter event handler.
-     * @param match Matched routes.
-     * @param callback Handler callback.
+     * Get formatted application title based on the application settings.
+     * @param subtitle Subtitle of the current page.
+     * @returns Returns the formatted title or undefined when there is no title to be set.
      */
-    async filterHandler(match, callback) {
-        await super.filterHandler(match, callback);
-        if (match.detail.granted) {
-            let title;
-            if (this.settings.title) {
-                title = this.settings.title.text;
-                if (match.variables.title) {
-                    title = `${title}${this.settings.title.separator || ' '}${match.variables.title}`;
-                }
+    formatTitle(subtitle) {
+        if (this.settings.title) {
+            if (!subtitle) {
+                return this.settings.title.text;
             }
-            else {
-                title = match.variables.title;
+            if (this.settings.title.prefix) {
+                return `${this.settings.title.text}${this.settings.title.separator || ' '}${subtitle}`;
             }
-            history.pushState(match.variables.state, title, match.detail.path);
+            return `${subtitle}${this.settings.title.separator || ' '}${this.settings.title.text}`;
         }
+        return subtitle;
     }
     /**
      * Process event handler.
@@ -57,13 +53,13 @@ let Main = class Main extends Application.Main {
     async processHandler(match, callback) {
         const output = match.detail.output;
         await super.processHandler(match, callback);
-        if (match.length === 0 && match.detail.granted) {
-            if (output.title) {
-                document.title = output.title;
+        if (match.detail.granted) {
+            const title = this.formatTitle(output.subtitle);
+            if (title) {
+                document.title = title;
             }
-            if (output.content) {
-                DOM.append(this.settings.body || document.body, output.content);
-            }
+            DOM.append(DOM.clear(this.settings.body || document.body), output.content);
+            history.pushState(match.variables.state, document.title, match.detail.path);
         }
     }
 };
@@ -71,8 +67,8 @@ __decorate([
     Class.Private()
 ], Main.prototype, "settings", void 0);
 __decorate([
-    Class.Protected()
-], Main.prototype, "filterHandler", null);
+    Class.Private()
+], Main.prototype, "formatTitle", null);
 __decorate([
     Class.Protected()
 ], Main.prototype, "processHandler", null);

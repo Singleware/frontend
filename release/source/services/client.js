@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
  */
 const Class = require("@singleware/class");
 const Observable = require("@singleware/observable");
+const Path = require("@singleware/path");
 /**
  * Front-end browser service class.
  */
@@ -22,13 +23,24 @@ let Client = class Client {
      */
     constructor(settings) {
         /**
+         * Current opened path.
+         */
+        this.opened = '';
+        /**
          * Service events.
          */
         this.events = {
             receive: new Observable.Subject(),
-            send: new Observable.Subject()
+            send: new Observable.Subject(),
+            error: new Observable.Subject()
         };
         this.settings = settings;
+    }
+    /**
+     * Current opened path.
+     */
+    get path() {
+        return this.opened;
     }
     /**
      * Receive request event.
@@ -43,21 +55,37 @@ let Client = class Client {
         return this.events.send;
     }
     /**
+     * Error response event.
+     */
+    get onError() {
+        return this.events.error;
+    }
+    /**
      * Starts the service.
      */
     start() {
-        this.events.receive.notifyAll({
-            path: this.settings.path || location.pathname,
-            input: {},
-            output: {},
-            environment: {}
-        });
+        this.open(this.settings.path || location.pathname);
     }
     /**
      * Stops the service.
      */
     stop() { }
+    /**
+     * Opens the specified path.
+     * @param path Path to be opened.
+     */
+    open(path) {
+        this.events.receive.notifyAll({
+            path: (this.opened = Path.resolve(Path.dirname(this.path), path)),
+            input: {},
+            output: {},
+            environment: {}
+        });
+    }
 };
+__decorate([
+    Class.Private()
+], Client.prototype, "opened", void 0);
 __decorate([
     Class.Private()
 ], Client.prototype, "settings", void 0);
@@ -66,16 +94,25 @@ __decorate([
 ], Client.prototype, "events", void 0);
 __decorate([
     Class.Public()
+], Client.prototype, "path", null);
+__decorate([
+    Class.Public()
 ], Client.prototype, "onReceive", null);
 __decorate([
     Class.Public()
 ], Client.prototype, "onSend", null);
 __decorate([
     Class.Public()
+], Client.prototype, "onError", null);
+__decorate([
+    Class.Public()
 ], Client.prototype, "start", null);
 __decorate([
     Class.Public()
 ], Client.prototype, "stop", null);
+__decorate([
+    Class.Public()
+], Client.prototype, "open", null);
 Client = __decorate([
     Class.Describe()
 ], Client);

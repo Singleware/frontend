@@ -10,7 +10,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const Frontend = require("../source");
 const default_1 = require("./default");
 // Creates an application.
-const browser = new Frontend.Main({});
+const browser = new Frontend.Main({
+    title: {
+        text: 'Example',
+        separator: ' / '
+    }
+});
 // Add the browser client service.
 browser.addService(Frontend.Services.Client, {});
 // Add the default handler.

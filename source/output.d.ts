@@ -9,9 +9,9 @@ import * as DOM from '@singleware/jsx';
  */
 export interface Output {
   /**
-   * Response title.
+   * Response subtitle.
    */
-  title?: string;
+  subtitle?: string;
   /**
    * Response content.
    */

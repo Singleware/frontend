@@ -10,7 +10,12 @@ import * as Frontend from '../source';
 import { Default } from './default';
 
 // Creates an application.
-const browser = new Frontend.Main({});
+const browser = new Frontend.Main({
+  title: {
+    text: 'Example',
+    separator: ' / '
+  }
+});
 
 // Add the browser client service.
 browser.addService(Frontend.Services.Client, {});
