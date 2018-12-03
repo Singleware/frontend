@@ -1,3 +1,8 @@
+/**
+ * Copyright (C) 2018 Silas B. Domingos
+ * This source code is licensed under the MIT License as described in the file LICENSE.
+ */
+import * as Class from '@singleware/class';
 import * as Observable from '@singleware/observable';
 import * as Application from '@singleware/application';
 import { Settings } from './settings';
@@ -6,7 +11,7 @@ import { Output } from '../output';
 /**
  * Front-end browser service class.
  */
-export declare class Client implements Application.Service<Input, Output> {
+export declare class Client extends Class.Null implements Application.Service<Input, Output> {
     /**
      * Current opened path.
      */

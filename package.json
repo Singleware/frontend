@@ -7,30 +7,28 @@
   "name": "@singleware/frontend",
   "description": "Singleware frontend project package.",
   "license": "MIT",
-  "version": "1.1.0",
+  "version": "1.1.4",
   "main": "release/source/index.js",
   "types": "release/types/index.d.ts",
   "keywords": [
-    "frontend",
-    "application",
-    "empty project",
-    "project"
+    "frontend application",
+    "empty frontend project"
   ],
   "repository": {
     "type": "git",
     "url": "https://github.com/singleware/frontend"
   },
   "engines": {
-    "node": ">=8"
+    "node": ">=10"
   },
   "dependencies": {
-    "@singleware/application": "^1.1.4",
-    "@singleware/class": "^1.1.11",
-    "@singleware/jsx": "^1.0.12",
-    "@singleware/path": "^1.0.1"
+    "@singleware/application": "^1.1.8",
+    "@singleware/class": "^1.1.14",
+    "@singleware/jsx": "^1.0.18",
+    "@singleware/path": "^1.0.4"
   },
   "devDependencies": {
-    "prettier": "^1.14.3",
+    "prettier": "^1.15.3",
     "typescript": "^2.9.2"
   },
   "prettier": {

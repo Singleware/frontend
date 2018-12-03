@@ -6,12 +6,28 @@ export { Match } from './types';
 export { Input } from './input';
 export { Output } from './output';
 
-import * as ServicesModule from './services';
-export import Services = ServicesModule;
+import * as Services from './services';
+export import Services = Services;
 
-import * as MainModule from './main';
-export import Main = MainModule.Main;
+import * as Module from './main';
+export import Main = Module.Main;
 
-// Aliases
-export const Filter = (<any>MainModule).Main.Filter;
-export const Processor = (<any>MainModule).Main.Processor;
+/**
+ * Declarations.
+ */
+import * as Application from '@singleware/application';
+import { MemberDecorator } from './types';
+
+/**
+ * Decorates the specified member to filter an application request. (Alias for Main.Filter)
+ * @param action Filter action settings.
+ * @returns Returns the decorator method.
+ */
+export const Filter = (action: Application.Action): MemberDecorator => Application.Main.Filter(action);
+
+/**
+ * Decorates the specified member to process an application request. (Alias for Main.Processor)
+ * @param action Route action settings.
+ * @returns Returns the decorator method.
+ */
+export const Processor = (action: Application.Action): MemberDecorator => Application.Main.Processor(action);

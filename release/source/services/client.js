@@ -16,12 +16,13 @@ const Path = require("@singleware/path");
 /**
  * Front-end browser service class.
  */
-let Client = class Client {
+let Client = class Client extends Class.Null {
     /**
      * Default constructor.
      * @param settings Application settings.
      */
     constructor(settings) {
+        super();
         /**
          * Current opened path.
          */
@@ -76,7 +77,7 @@ let Client = class Client {
      */
     open(path) {
         this.events.receive.notifyAll({
-            path: (this.opened = Path.resolve(Path.dirname(this.path), path)),
+            path: this.opened = Path.resolve(Path.dirname(this.path), path),
             input: {},
             output: {},
             environment: {}

@@ -18,7 +18,7 @@ const DOM = require("@singleware/jsx");
 /**
  * Default page class.
  */
-let Default = class Default {
+let Default = class Default extends Class.Null {
     /**
      * Default processor.
      * @param match Route match.

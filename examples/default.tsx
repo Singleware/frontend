@@ -13,7 +13,7 @@ import * as Frontend from '../source';
  * Default page class.
  */
 @Class.Describe()
-export class Default {
+export class Default extends Class.Null {
   /**
    * Default processor.
    * @param match Route match.

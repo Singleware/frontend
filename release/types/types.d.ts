@@ -14,6 +14,11 @@ import { Output } from './output';
 export type Callable<T = any> = Class.Callable<T>;
 
 /**
+ * Type declaration for member decorators.
+ */
+export type MemberDecorator = <T>(target: Object, property: string | symbol, descriptor?: TypedPropertyDescriptor<T>) => any;
+
+/**
  * Type declaration for route match.
  */
 export type Match = Application.Match<Input, Output>;

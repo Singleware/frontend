@@ -15,7 +15,7 @@ import { Output } from '../output';
  * Front-end browser service class.
  */
 @Class.Describe()
-export class Client implements Application.Service<Input, Output> {
+export class Client extends Class.Null implements Application.Service<Input, Output> {
   /**
    * Current opened path.
    */
@@ -43,6 +43,7 @@ export class Client implements Application.Service<Input, Output> {
    * @param settings Application settings.
    */
   constructor(settings: Settings) {
+    super();
     this.settings = settings;
   }
 
@@ -99,7 +100,7 @@ export class Client implements Application.Service<Input, Output> {
   @Class.Public()
   public open(path: string): void {
     this.events.receive.notifyAll({
-      path: (this.opened = Path.resolve(Path.dirname(this.path), path)),
+      path: this.opened = Path.resolve(Path.dirname(this.path), path),
       input: {},
       output: {},
       environment: {}
