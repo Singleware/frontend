@@ -6,34 +6,37 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
- *
- * The proposal of this example is to show how to use an handler into the front-end application
  */
 const Class = require("@singleware/class");
-const Application = require("@singleware/application");
-const DOM = require("@singleware/jsx");
+const Frontend = require("../../source");
+const handler_1 = require("./handler");
 /**
- * Default page class.
+ * Browser client, example class.
  */
-let Default = class Default extends Class.Null {
+let Example = class Example extends Frontend.Main {
     /**
-     * Default processor.
-     * @param match Route match.
+     * Default constructor.
      */
-    async defaultProcessor(match) {
-        const output = match.detail.output;
-        output.subtitle = 'Example';
-        output.content = DOM.create("h1", null, "It's working");
+    constructor() {
+        super({
+            title: {
+                text: 'Example',
+                separator: ' - '
+            }
+        });
+        // Add the client service.
+        const client = this.addService(new Frontend.Services.Client({}));
+        // Add the page handler.
+        this.addHandler(handler_1.Handler, client.navigator);
+        // Automatic start.
+        this.start();
     }
 };
-__decorate([
-    Class.Public(),
-    Application.Processor({ path: '/' })
-], Default.prototype, "defaultProcessor", null);
-Default = __decorate([
+Example = __decorate([
     Class.Describe()
-], Default);
-exports.Default = Default;
+], Example);
+// Starts the application.
+const instance = new Example();

@@ -1,12 +1,13 @@
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 import * as Class from '@singleware/class';
 import * as Application from '@singleware/application';
-import * as DOM from '@singleware/jsx';
+import * as JSX from '@singleware/jsx';
 
-import { Callable } from './types';
+import * as Types from './types';
+
 import { Input } from './input';
 import { Output } from './output';
 import { Settings } from './settings';
@@ -23,22 +24,75 @@ export class Main extends Application.Main<Input, Output> {
   private settings: Settings;
 
   /**
-   * Get formatted application title based on the application settings.
-   * @param subtitle Subtitle of the current page.
-   * @returns Returns the formatted title or undefined when there is no title to be set.
+   * Current script list.
    */
   @Class.Private()
-  private formatTitle(subtitle?: string): string | undefined {
-    if (this.settings.title) {
-      if (!subtitle) {
-        return this.settings.title.text;
-      }
-      if (this.settings.title.prefix) {
-        return `${this.settings.title.text}${this.settings.title.separator || ' '}${subtitle}`;
-      }
-      return `${subtitle}${this.settings.title.separator || ' '}${this.settings.title.text}`;
+  private scriptList = <HTMLScriptElement[]>[];
+
+  /**
+   * Current style list.
+   */
+  @Class.Private()
+  private styleList = <HTMLLinkElement[]>[];
+
+  /**
+   * Clear the specified list of elements by removing them from their parents.
+   * @param list List of elements.
+   */
+  @Class.Private()
+  private clearElements(list: HTMLElement[]): void {
+    while (list.length) {
+      (<HTMLElement>list.pop()).remove();
     }
-    return subtitle;
+  }
+
+  /**
+   * Set any output script from the specified output in the current document.
+   * @param output Output information.
+   */
+  @Class.Private()
+  private setScripts(output: Output): void {
+    this.clearElements(this.scriptList);
+    if (output.scripts) {
+      for (const url of output.scripts) {
+        const script = <HTMLScriptElement>JSX.create('script', { src: url });
+        JSX.append(document.head, script);
+        this.scriptList.push(script);
+      }
+    }
+  }
+
+  /**
+   * Set any output style from the specified output in the current document.
+   * @param output Output information.
+   */
+  @Class.Private()
+  private setStyles(output: Output): void {
+    this.clearElements(this.styleList);
+    if (output.styles) {
+      for (const url of output.styles) {
+        const style = <HTMLLinkElement>JSX.create('link', { href: url, rel: 'stylesheet', type: 'text/css' });
+        JSX.append(document.head, style);
+        this.styleList.push(style);
+      }
+    }
+  }
+
+  /**
+   * Set any defined title from the specified output in the current document.
+   * @param output Output information.
+   */
+  @Class.Private()
+  private setTitle(output: Output): void {
+    if (output.subtitle) {
+      if (this.settings.title.prefix) {
+        document.title = `${this.settings.title.text}${this.settings.title.separator}${output.subtitle}`;
+      } else {
+        document.title = `${output.subtitle}${this.settings.title.separator}${this.settings.title.text}`;
+      }
+    } else {
+      document.title = this.settings.title.text;
+    }
   }
 
   /**
@@ -47,15 +101,14 @@ export class Main extends Application.Main<Input, Output> {
    * @param callback Handler callback.
    */
   @Class.Protected()
-  protected async processHandler(match: Application.Match<Input, Output>, callback: Callable): Promise<void> {
-    const output = match.detail.output;
+  protected async processHandler(match: Types.Match, callback: Types.Callable): Promise<void> {
+    const request = match.detail;
     await super.processHandler(match, callback);
-    if (match.detail.granted) {
-      const title = this.formatTitle(output.subtitle);
-      if (title) {
-        document.title = title;
-      }
-      DOM.append(DOM.clear(this.settings.body || document.body), output.content);
+    if (!request.error) {
+      this.setTitle(request.output);
+      this.setScripts(request.output);
+      this.setStyles(request.output);
+      JSX.append(JSX.clear(this.settings.body || document.body), request.output.content);
       history.pushState(match.variables.state, document.title, match.detail.path);
     }
   }
@@ -65,10 +118,7 @@ export class Main extends Application.Main<Input, Output> {
    * @param settings Application settings.
    */
   constructor(settings: Settings) {
-    super({
-      separator: '/',
-      variable: /^\{([a-z_0-9]+)\}$/
-    });
+    super({ separator: '/', variable: /^\{([a-zA-Z_0-9]+)\}$/ });
     this.settings = settings;
   }
 }

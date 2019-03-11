@@ -1,5 +1,5 @@
 import * as Application from '@singleware/application';
-import { Callable } from './types';
+import * as Types from './types';
 import { Input } from './input';
 import { Output } from './output';
 import { Settings } from './settings';
@@ -12,17 +12,39 @@ export declare class Main extends Application.Main<Input, Output> {
      */
     private settings;
     /**
-     * Get formatted application title based on the application settings.
-     * @param subtitle Subtitle of the current page.
-     * @returns Returns the formatted title or undefined when there is no title to be set.
+     * Current script list.
      */
-    private formatTitle;
+    private scriptList;
+    /**
+     * Current style list.
+     */
+    private styleList;
+    /**
+     * Clear the specified list of elements by removing them from their parents.
+     * @param list List of elements.
+     */
+    private clearElements;
+    /**
+     * Set any output script from the specified output in the current document.
+     * @param output Output information.
+     */
+    private setScripts;
+    /**
+     * Set any output style from the specified output in the current document.
+     * @param output Output information.
+     */
+    private setStyles;
+    /**
+     * Set any defined title from the specified output in the current document.
+     * @param output Output information.
+     */
+    private setTitle;
     /**
      * Process event handler.
      * @param match Matched routes.
      * @param callback Handler callback.
      */
-    protected processHandler(match: Application.Match<Input, Output>, callback: Callable): Promise<void>;
+    protected processHandler(match: Types.Match, callback: Types.Callable): Promise<void>;
     /**
      * Default constructor.
      * @param settings Application settings.

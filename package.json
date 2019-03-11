@@ -7,7 +7,7 @@
   "name": "@singleware/frontend",
   "description": "Singleware frontend project package.",
   "license": "MIT",
-  "version": "1.1.5",
+  "version": "1.2.3",
   "main": "release/source/index.js",
   "types": "release/types/index.d.ts",
   "keywords": [
@@ -22,12 +22,15 @@
     "node": ">=10"
   },
   "dependencies": {
-    "@singleware/application": "^1.1.9",
+    "@singleware/application": "^1.2.3",
     "@singleware/class": "^1.1.19",
-    "@singleware/jsx": "^1.0.20",
+    "@singleware/jsx": "^1.0.24",
     "@singleware/path": "^1.0.5"
   },
   "devDependencies": {
+    "@singleware/backend": "^1.2.5",
+    "@singleware/bundler": "^1.0.19",
+    "@types/node": "^11.11.1",
     "prettier": "^1.16.4",
     "typescript": "^2.9.2"
   },
@@ -38,9 +41,11 @@
     "semi": true
   },
   "scripts": {
-    "build": "npm run make && npm run update",
-    "make": "tsc",
-    "update": "npm run update-root && npm run update-services",
+    "start": "node ./release/examples/server.js",
+    "build": "npm run make-source && npm run make-examples",
+    "make-source": "npx tsc -p ./source && npm run update-source",
+    "make-examples": "npx tsc -p ./examples && node ./release/examples/bundler.js",
+    "update-source": "npm run update-root && npm run update-services",
     "update-root": "cp -Rf ./source/*.d.ts ./release/types",
     "update-services": "cp -Rf ./source/services/*.d.ts ./release/types/services"
   }

@@ -6,15 +6,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 const Class = require("@singleware/class");
 const Observable = require("@singleware/observable");
-const Path = require("@singleware/path");
+const navigator_1 = require("./navigator");
 /**
- * Front-end browser service class.
+ * Front-end client class.
  */
 let Client = class Client extends Class.Null {
     /**
@@ -24,78 +24,85 @@ let Client = class Client extends Class.Null {
     constructor(settings) {
         super();
         /**
-         * Current opened path.
+         * Navigator instance.
          */
-        this.opened = '';
+        this.navigation = new navigator_1.Navigator(this);
         /**
-         * Service events.
+         * Receive subject instance.
          */
-        this.events = {
-            receive: new Observable.Subject(),
-            send: new Observable.Subject(),
-            error: new Observable.Subject()
-        };
+        this.receiveSubject = new Observable.Subject();
+        /**
+         * Send subject instance.
+         */
+        this.sendSubject = new Observable.Subject();
+        /**
+         * Error subject instance.
+         */
+        this.errorSubject = new Observable.Subject();
         this.settings = settings;
     }
     /**
-     * Current opened path.
+     * Gets the current opened path.
      */
     get path() {
-        return this.opened;
+        return this.navigation.path;
+    }
+    /**
+     * Gets the navigator instance.
+     */
+    get navigator() {
+        return this.navigation;
     }
     /**
      * Receive request event.
      */
     get onReceive() {
-        return this.events.receive;
+        return this.receiveSubject;
     }
     /**
      * Send response event.
      */
     get onSend() {
-        return this.events.send;
+        return this.sendSubject;
     }
     /**
      * Error response event.
      */
     get onError() {
-        return this.events.error;
+        return this.errorSubject;
     }
     /**
      * Starts the service.
      */
     start() {
-        this.open(this.settings.path || location.pathname);
+        this.navigation.open(this.settings.path || location.pathname);
     }
     /**
      * Stops the service.
      */
     stop() { }
-    /**
-     * Opens the specified path.
-     * @param path Path to be opened.
-     */
-    open(path) {
-        this.events.receive.notifyAll({
-            path: this.opened = Path.resolve(Path.dirname(this.path), path),
-            input: {},
-            output: {},
-            environment: {}
-        });
-    }
 };
-__decorate([
-    Class.Private()
-], Client.prototype, "opened", void 0);
 __decorate([
     Class.Private()
 ], Client.prototype, "settings", void 0);
 __decorate([
     Class.Private()
-], Client.prototype, "events", void 0);
+], Client.prototype, "navigation", void 0);
+__decorate([
+    Class.Private()
+], Client.prototype, "receiveSubject", void 0);
+__decorate([
+    Class.Private()
+], Client.prototype, "sendSubject", void 0);
+__decorate([
+    Class.Private()
+], Client.prototype, "errorSubject", void 0);
 __decorate([
     Class.Public()
 ], Client.prototype, "path", null);
+__decorate([
+    Class.Public()
+], Client.prototype, "navigator", null);
 __decorate([
     Class.Public()
 ], Client.prototype, "onReceive", null);
@@ -111,9 +118,6 @@ __decorate([
 __decorate([
     Class.Public()
 ], Client.prototype, "stop", null);
-__decorate([
-    Class.Public()
-], Client.prototype, "open", null);
 Client = __decorate([
     Class.Describe()
 ], Client);

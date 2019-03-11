@@ -1,5 +1,5 @@
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 
@@ -8,15 +8,15 @@
  */
 export interface Title {
   /**
+   * Title text.
+   */
+  text: string;
+  /**
    * Determines whether the title is prefixed or not.
    */
   prefix?: boolean;
   /**
-   * Title text.
-   */
-  text?: string;
-  /**
    * Title separator.
    */
-  separator?: string;
+  separator: string;
 }

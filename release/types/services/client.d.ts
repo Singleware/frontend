@@ -1,50 +1,60 @@
-/**
- * Copyright (C) 2018 Silas B. Domingos
- * This source code is licensed under the MIT License as described in the file LICENSE.
- */
 import * as Class from '@singleware/class';
 import * as Observable from '@singleware/observable';
 import * as Application from '@singleware/application';
-import { Settings } from './settings';
+import * as Types from '../types';
 import { Input } from '../input';
 import { Output } from '../output';
+import { Settings } from './settings';
+import { Navigator } from './navigator';
 /**
- * Front-end browser service class.
+ * Front-end client class.
  */
 export declare class Client extends Class.Null implements Application.Service<Input, Output> {
-    /**
-     * Current opened path.
-     */
-    private opened;
     /**
      * Service settings.
      */
     private settings;
     /**
-     * Service events.
+     * Navigator instance.
      */
-    private events;
+    private navigation;
+    /**
+     * Receive subject instance.
+     */
+    private receiveSubject;
+    /**
+     * Send subject instance.
+     */
+    private sendSubject;
+    /**
+     * Error subject instance.
+     */
+    private errorSubject;
     /**
      * Default constructor.
      * @param settings Application settings.
      */
     constructor(settings: Settings);
     /**
-     * Current opened path.
+     * Gets the current opened path.
      */
     readonly path: string;
     /**
+     * Gets the navigator instance.
+     */
+    readonly navigator: Navigator;
+    /**
      * Receive request event.
      */
-    readonly onReceive: Observable.Subject<Application.Request<Input, Output>>;
+    readonly onReceive: Observable.Subject<Types.Request>;
     /**
      * Send response event.
      */
-    readonly onSend: Observable.Subject<Application.Request<Input, Output>>;
+    readonly onSend: Observable.Subject<Types.Request>;
     /**
      * Error response event.
      */
-    readonly onError: Observable.Subject<Application.Request<Input, Output>>;
+    readonly onError: Observable.Subject<Types.Request>;
     /**
      * Starts the service.
      */
@@ -53,9 +63,4 @@ export declare class Client extends Class.Null implements Application.Service<In
      * Stops the service.
      */
     stop(): void;
-    /**
-     * Opens the specified path.
-     * @param path Path to be opened.
-     */
-    open(path: string): void;
 }

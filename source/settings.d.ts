@@ -1,5 +1,5 @@
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 import { Title } from './title';
@@ -11,7 +11,7 @@ export interface Settings {
   /**
    * Main title.
    */
-  title?: Title;
+  title: Title;
   /**
    * Body element.
    */
