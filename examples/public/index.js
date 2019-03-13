@@ -839,8 +839,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 const Class = require("@singleware/class");
@@ -861,7 +861,7 @@ let Match = class Match extends Class.Null {
         this.matchPath = path;
         this.matchEvents = events;
         this.matchVariables = variables;
-        this.currentVariables = variables.find(() => true);
+        this.currentVariables = variables.shift();
         this.remainingPath = remaining;
         this.extraDetails = detail;
     }
@@ -906,8 +906,8 @@ let Match = class Match extends Class.Null {
      * @returns Returns the own instance.
      */
     nextSync() {
-        this.currentVariables = this.matchVariables.shift();
         this.matchEvents.notifyFirstSync(this);
+        this.currentVariables = this.matchVariables.shift();
         return this;
     }
     /**
@@ -915,8 +915,8 @@ let Match = class Match extends Class.Null {
      * @returns Returns a promise to get the own instance.
      */
     async next() {
-        this.currentVariables = this.matchVariables.shift();
         await this.matchEvents.notifyFirst(this);
+        this.currentVariables = this.matchVariables.shift();
         return this;
     }
 };
@@ -974,8 +974,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 const Class = require("@singleware/class");
@@ -1383,10 +1383,10 @@ let Main = Main_1 = class Main extends Class.Null {
         const local = request.environment.local;
         const match = this.filters.match(request.path, request);
         while (request.granted && match.length) {
-            match.detail.environment.local = { ...variables, ...match.variables, ...local };
+            request.environment.local = { ...variables, ...match.variables, ...local };
             await match.next();
+            request.environment.local = local;
         }
-        request.environment.local = local;
         return request.granted || false;
     }
     /**
@@ -1398,10 +1398,10 @@ let Main = Main_1 = class Main extends Class.Null {
         const local = request.environment.local;
         const match = this.processors.match(request.path, request);
         while (match.length && (await this.performFilters(request, match.variables))) {
-            match.detail.environment.local = { ...match.variables, ...local };
+            request.environment.local = { ...match.variables, ...local };
             await match.next();
+            request.environment.local = local;
         }
-        request.environment.local = local;
         this.notifyRequest('process', request);
     }
     /**
