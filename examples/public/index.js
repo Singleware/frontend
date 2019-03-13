@@ -6,9 +6,14 @@
 var Loader;
 (function(Loader) {
   /**
-   * All initialized modules.
+   * All loaded modules.
    */
   const cache = {};
+
+  /**
+   * All loading locations.
+   */
+  const loading = [];
 
   /**
    * All modules repository.
@@ -1375,13 +1380,13 @@ let Main = Main_1 = class Main extends Class.Null {
      * @returns Returns true when the request access is granted or false otherwise.
      */
     async performFilters(request, variables) {
-        const environment = request.environment;
+        const local = request.environment.local;
         const match = this.filters.match(request.path, request);
         while (request.granted && match.length) {
-            match.detail.environment = { ...variables, ...match.variables, ...environment };
+            match.detail.environment.local = { ...variables, ...match.variables, ...local };
             await match.next();
         }
-        request.environment = environment;
+        request.environment.local = local;
         return request.granted || false;
     }
     /**
@@ -1390,13 +1395,13 @@ let Main = Main_1 = class Main extends Class.Null {
      */
     async receiveHandler(request) {
         this.notifyRequest('receive', request);
+        const local = request.environment.local;
         const match = this.processors.match(request.path, request);
-        const environment = request.environment;
         while (match.length && (await this.performFilters(request, match.variables))) {
-            match.detail.environment = { ...match.variables, ...environment };
+            match.detail.environment.local = { ...match.variables, ...local };
             await match.next();
         }
-        request.environment = environment;
+        request.environment.local = local;
         this.notifyRequest('process', request);
     }
     /**
@@ -2729,7 +2734,10 @@ let Navigator = class Navigator extends Class.Null {
             path: this.openedPath,
             input: {},
             output: {},
-            environment: {},
+            environment: {
+                local: {},
+                shared: {}
+            },
             granted: true
         });
     }
@@ -2918,8 +2926,7 @@ const instance = new Example();
    * @returns Returns the base path.
    */
   function relative(path) {
-    const char = path.substr(0, 1);
-    return char !== '/' && char !== '@';
+    return path[0] !== '/' && path[0] !== '@';
   }
 
   /**
@@ -2954,22 +2961,24 @@ const instance = new Example();
   }
 
   /**
-   * Loads the module that corresponds to the specified path.
-   * @param path Module path.
+   * Loads the module that corresponds to the specified location.
+   * @param location Module location.
    * @returns Returns all exported members.
    */
-  function loadModule(path) {
-    const module = repository[path];
+  function loadModule(location) {
+    const module = repository[location];
     const current = Loader.baseDirectory;
     const exports = {};
     let caught;
     try {
-      Loader.baseDirectory = module.pack ? path : dirname(path);
+      Loader.baseDirectory = module.pack ? location : dirname(location);
+      loading.push(location);
       module.invoke(exports, require);
     } catch (exception) {
       caught = exception;
     } finally {
       Loader.baseDirectory = current;
+      loading.pop();
       if (caught) {
         throw caught;
       }
@@ -2984,14 +2993,18 @@ const instance = new Example();
    * @throws Throws an error when the specified module does not exists.
    */
   function require(path) {
-    const module = normalize(relative(path) ? `${Loader.baseDirectory}/${path}` : path);
-    if (!cache[module]) {
-      if (!repository[module]) {
-        throw new Error(`Module "${path}" does not found.`);
+    const location = normalize(relative(path) ? `${Loader.baseDirectory}/${path}` : path);
+    if (!cache[location]) {
+      const current = loading[loading.length - 1] || '.';
+      if (!repository[location]) {
+        throw new Error(`Module "${path}" loaded by "${current}" does not found.`);
       }
-      cache[module] = loadModule(module);
+      if (loading.includes(location)) {
+        throw new Error(`Module "${current}" with circular reference to module "${path}"`);
+      }
+      cache[location] = loadModule(location);
     }
-    return cache[module];
+    return cache[location];
   }
 
   /**

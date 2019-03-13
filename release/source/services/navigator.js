@@ -44,7 +44,10 @@ let Navigator = class Navigator extends Class.Null {
             path: this.openedPath,
             input: {},
             output: {},
-            environment: {},
+            environment: {
+                local: {},
+                shared: {}
+            },
             granted: true
         });
     }
