@@ -104,7 +104,9 @@ export class Main extends Application.Main<Input, Output> {
   protected async processHandler(match: Types.Match, callback: Types.Callable): Promise<void> {
     const request = match.detail;
     await super.processHandler(match, callback);
-    if (!request.error) {
+    if (request.error) {
+      throw request.error;
+    } else {
       this.setTitle(request.output);
       this.setScripts(request.output);
       this.setStyles(request.output);

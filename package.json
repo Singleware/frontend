@@ -7,7 +7,7 @@
   "name": "@singleware/frontend",
   "description": "Singleware frontend project package.",
   "license": "MIT",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "main": "release/source/index.js",
   "types": "release/types/index.d.ts",
   "keywords": [

@@ -95,7 +95,10 @@ let Main = class Main extends Application.Main {
     async processHandler(match, callback) {
         const request = match.detail;
         await super.processHandler(match, callback);
-        if (!request.error) {
+        if (request.error) {
+            throw request.error;
+        }
+        else {
             this.setTitle(request.output);
             this.setScripts(request.output);
             this.setStyles(request.output);
