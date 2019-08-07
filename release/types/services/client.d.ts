@@ -1,7 +1,11 @@
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
+ * This source code is licensed under the MIT License as described in the file LICENSE.
+ */
 import * as Class from '@singleware/class';
 import * as Observable from '@singleware/observable';
 import * as Application from '@singleware/application';
-import * as Types from '../types';
+import * as Aliases from '../aliases';
 import { Input } from '../input';
 import { Output } from '../output';
 import { Settings } from './settings';
@@ -46,15 +50,15 @@ export declare class Client extends Class.Null implements Application.Service<In
     /**
      * Receive request event.
      */
-    readonly onReceive: Observable.Subject<Types.Request>;
+    readonly onReceive: Observable.Subject<Aliases.Request>;
     /**
      * Send response event.
      */
-    readonly onSend: Observable.Subject<Types.Request>;
+    readonly onSend: Observable.Subject<Aliases.Request>;
     /**
      * Error response event.
      */
-    readonly onError: Observable.Subject<Types.Request>;
+    readonly onError: Observable.Subject<Aliases.Request>;
     /**
      * Starts the service.
      */

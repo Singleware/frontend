@@ -6,7 +6,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
@@ -47,5 +47,6 @@ let Example = class Example extends Backend.Main {
 Example = __decorate([
     Class.Describe()
 ], Example);
-// Starts the application.
-const instance = new Example();
+// Start application.
+new Example();
+//# sourceMappingURL=server.js.map

@@ -6,7 +6,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
@@ -19,37 +19,59 @@ let Navigator = class Navigator extends Class.Null {
     /**
      * Default constructor.
      * @param client Client instance.
+     * @param path Initial path.
      */
-    constructor(client) {
+    constructor(client, path) {
         super();
-        /**
-         * Current opened path.
-         */
-        this.openedPath = '';
+        globalThis.addEventListener('popstate', this.popStateHandler.bind(this));
         this.client = client;
+        this.current = path;
     }
     /**
-     * Current opened path.
+     * Renders the specified path according to the given state.
+     * @param path Path to be rendered.
+     * @param state Determines whether the renderer will preserves the current state.
+     */
+    renderPath(path, state) {
+        this.client.onReceive.notifyAll({
+            path: path,
+            input: {},
+            output: {},
+            environment: {
+                local: {
+                    state: state
+                },
+                shared: {}
+            },
+            granted: true
+        });
+    }
+    /**
+     * Pop State, event handler.
+     */
+    popStateHandler() {
+        this.current = document.location.pathname;
+        this.renderPath(document.location.pathname, false);
+    }
+    /**
+     * Gets the current path.
      */
     get path() {
-        return this.openedPath;
+        return this.current;
     }
     /**
      * Opens the specified path.
      * @param path Path to be opened.
      */
     open(path) {
-        this.openedPath = Path.resolve(Path.dirname(this.openedPath), path);
-        this.client.onReceive.notifyAll({
-            path: this.openedPath,
-            input: {},
-            output: {},
-            environment: {
-                local: {},
-                shared: {}
-            },
-            granted: true
-        });
+        this.current = Path.resolve(Path.dirname(this.current), path);
+        this.renderPath(this.current, true);
+    }
+    /**
+     * Reopens the current path.
+     */
+    reload() {
+        this.renderPath(this.current, false);
     }
 };
 __decorate([
@@ -57,14 +79,24 @@ __decorate([
 ], Navigator.prototype, "client", void 0);
 __decorate([
     Class.Private()
-], Navigator.prototype, "openedPath", void 0);
+], Navigator.prototype, "current", void 0);
+__decorate([
+    Class.Private()
+], Navigator.prototype, "renderPath", null);
+__decorate([
+    Class.Private()
+], Navigator.prototype, "popStateHandler", null);
 __decorate([
     Class.Public()
 ], Navigator.prototype, "path", null);
 __decorate([
     Class.Public()
 ], Navigator.prototype, "open", null);
+__decorate([
+    Class.Public()
+], Navigator.prototype, "reload", null);
 Navigator = __decorate([
     Class.Describe()
 ], Navigator);
 exports.Navigator = Navigator;
+//# sourceMappingURL=navigator.js.map

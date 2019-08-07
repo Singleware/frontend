@@ -1,4 +1,4 @@
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
@@ -6,7 +6,7 @@ import * as Class from '@singleware/class';
 import * as Application from '@singleware/application';
 import * as JSX from '@singleware/jsx';
 
-import * as Types from './types';
+import * as Aliases from './aliases';
 
 import { Input } from './input';
 import { Output } from './output';
@@ -101,7 +101,7 @@ export class Main extends Application.Main<Input, Output> {
    * @param callback Handler callback.
    */
   @Class.Protected()
-  protected async processHandler(match: Types.Match, callback: Types.Callable): Promise<void> {
+  protected async processHandler(match: Aliases.Match, callback: Aliases.Callable): Promise<void> {
     const request = match.detail;
     await super.processHandler(match, callback);
     if (request.error) {
@@ -111,7 +111,9 @@ export class Main extends Application.Main<Input, Output> {
       this.setScripts(request.output);
       this.setStyles(request.output);
       JSX.append(JSX.clear(this.settings.body || document.body), request.output.content);
-      history.pushState(match.variables.state, document.title, match.detail.path);
+      if (request.environment.local.state) {
+        history.pushState(match.variables.state, document.title, match.detail.path);
+      }
     }
   }
 

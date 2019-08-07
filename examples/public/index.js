@@ -18,7 +18,8 @@ var Loader;
   /**
    * All modules repository.
    */
-  const repository = {"@singleware/class/exception":{pack:false, invoke:function(exports, require){"use strict";
+  const repository = {"@singleware/class/exception":{pack:false, invoke:function(exports, require){
+"use strict";
 /**
  * Copyright (C) 2018 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
@@ -30,7 +31,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 class Exception extends Error {
 }
 exports.Exception = Exception;
-}},"@singleware/class/helper":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/class/helper":{pack:false, invoke:function(exports, require){
+"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const exception_1 = require("./exception");
 /**
@@ -388,7 +392,10 @@ var Helper;
     }
     Helper.resolve = resolve;
 })(Helper = exports.Helper || (exports.Helper = {}));
-}},"@singleware/class/index":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/class/index":{pack:false, invoke:function(exports, require){
+"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var exception_1 = require("./exception");
 exports.Exception = exception_1.Exception;
@@ -440,17 +447,20 @@ exports.perform = async (context, callback, ...parameters) => helper_1.Helper.pe
  * @returns Returns the original context.
  */
 exports.resolve = (context) => helper_1.Helper.resolve(context);
-}},"@singleware/class":{pack:true, invoke:function(exports, require){Object.assign(exports, require('index'));}},"@singleware/injection/index":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/class":{pack:true, invoke:function(exports, require){
+Object.assign(exports, require('index'));
+}},
+"@singleware/injection/index":{pack:false, invoke:function(exports, require){
+"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 var manager_1 = require("./manager");
 exports.Manager = manager_1.Manager;
-/**
- * Declarations.
- */
 const manager_2 = require("./manager");
 // Global manager.
 const global = new manager_2.Manager();
@@ -461,11 +471,13 @@ const global = new manager_2.Manager();
  */
 exports.Describe = (settings) => global.Describe(settings);
 /**
- * Decorates the specified class to be injected by the specified global dependencies.
- * @param list List of dependencies.
+ * Decorates a class type or class property to be injected by the specified dependencies.
+ * @param dependency First dependency.
+ * @param dependencies Remaining dependencies.
  * @returns Returns the decorator method.
+ * @throws Throws an error when multiple dependencies are specified in a class property injection.
  */
-exports.Inject = (...list) => global.Inject(...list);
+exports.Inject = (dependency, ...dependencies) => global.Inject(dependency, ...dependencies);
 /**
  * Resolves the current instance of the specified class type.
  * @param type Class type.
@@ -480,7 +492,13 @@ exports.resolve = (type) => global.resolve(type);
  * @returns Returns a new instance of the specified class type.
  */
 exports.construct = (type, ...parameters) => global.construct(type, ...parameters);
-}},"@singleware/injection":{pack:true, invoke:function(exports, require){Object.assign(exports, require('index'));}},"@singleware/injection/manager":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/injection":{pack:true, invoke:function(exports, require){
+Object.assign(exports, require('index'));
+}},
+"@singleware/injection/manager":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -488,8 +506,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 const Class = require("@singleware/class");
@@ -503,13 +521,93 @@ let Manager = class Manager extends Class.Null {
     constructor() {
         super(...arguments);
         /**
+         * Map of injected properties.
+         */
+        this.injectionsMap = new WeakMap();
+        /**
          * Map of singleton instances.
          */
-        this.instances = new WeakMap();
+        this.singletonsMap = new WeakMap();
         /**
-         * Map of dependencies.
+         * Map of dependency settings.
          */
-        this.dependencies = new WeakMap();
+        this.settingsMap = new WeakMap();
+    }
+    /**
+     * Wraps the specified dependency list in the given class type.
+     * @param type Class type.
+     * @param dependencies Dependency class list.
+     * @returns Returns the wrapped class type.
+     */
+    wrapClass(type, dependencies) {
+        return new Proxy(type, {
+            construct: (target, parameters, other) => {
+                const list = {};
+                for (const type of dependencies) {
+                    const settings = this.settingsMap.get(type.prototype.constructor);
+                    list[settings.name || type.name] = this.resolve(type);
+                }
+                return Reflect.construct(target, [list, parameters], other);
+            }
+        });
+    }
+    /**
+     * Creates a new property for the specified dependency.
+     * @param property Property name.
+     * @param dependency Dependency class.
+     * @returns Returns the generated property descriptor.
+     */
+    createProperty(property, dependency) {
+        const resolver = this.resolve.bind(this, dependency);
+        const injections = this.injectionsMap;
+        let map;
+        return {
+            enumerable: false,
+            get: function () {
+                const context = Class.resolve(this);
+                if (!(map = injections.get(context))) {
+                    injections.set(context, (map = {}));
+                }
+                return property in map ? map[property] : (map[property] = resolver());
+            },
+            set: function () {
+                throw new Error(`Injected dependencies are read-only.`);
+            }
+        };
+    }
+    /**
+     * Wraps the specified dependency into the given property descriptor.
+     * @param property Property name.
+     * @param dependency Dependency class.
+     * @param descriptor Property descriptor.
+     * @returns Returns the specified property descriptor or a new generated property descriptor.
+     * @throws Throws an error when the property descriptor is a method.
+     */
+    wrapProperty(property, dependency, descriptor) {
+        if (descriptor.value instanceof Function) {
+            throw new Error(`Only properties are allowed for dependency injection.`);
+        }
+        else {
+            if (!(descriptor.get instanceof Function) || !(descriptor.set instanceof Function)) {
+                return this.createProperty(property, dependency);
+            }
+            else {
+                const resolver = this.resolve.bind(this, dependency);
+                const getter = descriptor.get;
+                const setter = descriptor.set;
+                descriptor.get = function () {
+                    let instance = getter.call(this);
+                    if (!instance) {
+                        setter.call(this, (instance = resolver()));
+                    }
+                    return instance;
+                };
+                descriptor.set = function () {
+                    throw new Error(`Injected dependencies are read-only.`);
+                };
+                return descriptor;
+            }
+        }
     }
     /**
      * Decorates the specified class to be a dependency class.
@@ -518,54 +616,59 @@ let Manager = class Manager extends Class.Null {
      */
     Describe(settings) {
         return (type) => {
-            if (this.dependencies.has(type.prototype)) {
-                throw new TypeError(`Dependency type ${type.name} is already described.`);
+            if (this.settingsMap.has(type.prototype.constructor)) {
+                throw new TypeError(`Dependency '${type.name}' is already described.`);
             }
-            this.dependencies.set(type.prototype, settings || {});
+            this.settingsMap.set(type.prototype.constructor, settings || {});
         };
     }
     /**
-     * Decorates the specified class to be injected by the specified dependencies.
-     * @param list List of dependencies.
+     * Decorates a class type or class property to be injected by the specified dependencies.
+     * @param dependency First dependency.
+     * @param dependencies Remaining dependencies.
      * @returns Returns the decorator method.
+     * @throws Throws an error when multiple dependencies are specified in a class property injection.
      */
-    Inject(...list) {
-        return (type) => {
-            const repository = this.dependencies;
-            return new Proxy(type, {
-                construct: (type, parameters, target) => {
-                    const dependencies = {};
-                    for (const type of list) {
-                        const settings = repository.get(type.prototype);
-                        dependencies[settings.name || type.name] = this.resolve(type);
-                    }
-                    return Reflect.construct(type, [dependencies, parameters], target);
+    Inject(dependency, ...dependencies) {
+        return (scope, property, descriptor) => {
+            if (!property) {
+                return this.wrapClass(scope, [dependency, ...dependencies]);
+            }
+            else {
+                if (dependencies.length > 0) {
+                    throw new Error(`Multiple dependency injection in a class property isn't allowed.`);
                 }
-            });
+                return this.wrapProperty(property, dependency, descriptor || {});
+            }
         };
     }
     /**
-     * Resolves the current instance of the specified class type.
+     * Resolves the current instance from the specified class type.
      * @param type Class type.
-     * @throws Throws a type error when the class type does not exists in the dependencies.
+     * @throws Throws a type error when the class type isn't a described dependency.
      * @returns Returns the resolved instance.
      */
     resolve(type) {
-        const settings = this.dependencies.get(type.prototype);
+        const constructor = type.prototype.constructor;
+        const settings = this.settingsMap.get(constructor);
         if (!settings) {
-            throw new TypeError(`Dependency type ${type ? type.name : void 0} does not exists.`);
+            throw new TypeError(`Dependency '${type ? type.name : void 0}' doesn't found.`);
         }
-        if (settings.singleton) {
-            let instance = this.instances.get(type);
-            if (!instance) {
-                this.instances.set(type, (instance = this.construct(type)));
+        else {
+            if (!settings.singleton) {
+                return this.construct(type);
             }
-            return instance;
+            else {
+                let instance = this.singletonsMap.get(constructor);
+                if (!instance) {
+                    this.singletonsMap.set(constructor, (instance = this.construct(type)));
+                }
+                return instance;
+            }
         }
-        return this.construct(type);
     }
     /**
-     * Constructs a new instance of the specified class type.
+     * Constructs a new instance for the specified class type.
      * @param type Class type.
      * @param parameters Initial parameters.
      * @returns Returns a new instance of the specified class type.
@@ -576,10 +679,22 @@ let Manager = class Manager extends Class.Null {
 };
 __decorate([
     Class.Private()
-], Manager.prototype, "instances", void 0);
+], Manager.prototype, "injectionsMap", void 0);
 __decorate([
     Class.Private()
-], Manager.prototype, "dependencies", void 0);
+], Manager.prototype, "singletonsMap", void 0);
+__decorate([
+    Class.Private()
+], Manager.prototype, "settingsMap", void 0);
+__decorate([
+    Class.Private()
+], Manager.prototype, "wrapClass", null);
+__decorate([
+    Class.Private()
+], Manager.prototype, "createProperty", null);
+__decorate([
+    Class.Private()
+], Manager.prototype, "wrapProperty", null);
 __decorate([
     Class.Public()
 ], Manager.prototype, "Describe", null);
@@ -596,11 +711,20 @@ Manager = __decorate([
     Class.Describe()
 ], Manager);
 exports.Manager = Manager;
-}},"@singleware/observable/index":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/observable/index":{pack:false, invoke:function(exports, require){
+"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var subject_1 = require("./subject");
 exports.Subject = subject_1.Subject;
-}},"@singleware/observable":{pack:true, invoke:function(exports, require){Object.assign(exports, require('index'));}},"@singleware/observable/subject":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/observable":{pack:true, invoke:function(exports, require){
+Object.assign(exports, require('index'));
+}},
+"@singleware/observable/subject":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -734,7 +858,10 @@ Subject = Subject_1 = __decorate([
     Class.Describe()
 ], Subject);
 exports.Subject = Subject;
-}},"@singleware/pipeline/index":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/pipeline/index":{pack:false, invoke:function(exports, require){
+"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * Copyright (C) 2018 Silas B. Domingos
@@ -742,7 +869,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
  */
 var subject_1 = require("./subject");
 exports.Subject = subject_1.Subject;
-}},"@singleware/pipeline":{pack:true, invoke:function(exports, require){Object.assign(exports, require('index'));}},"@singleware/pipeline/subject":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/pipeline":{pack:true, invoke:function(exports, require){
+Object.assign(exports, require('index'));
+}},
+"@singleware/pipeline/subject":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -825,13 +958,22 @@ Subject = __decorate([
     Class.Describe()
 ], Subject);
 exports.Subject = Subject;
-}},"@singleware/routing/index":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/routing/index":{pack:false, invoke:function(exports, require){
+"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var match_1 = require("./match");
 exports.Match = match_1.Match;
 var router_1 = require("./router");
 exports.Router = router_1.Router;
-}},"@singleware/routing":{pack:true, invoke:function(exports, require){Object.assign(exports, require('index'));}},"@singleware/routing/match":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/routing":{pack:true, invoke:function(exports, require){
+Object.assign(exports, require('index'));
+}},
+"@singleware/routing/match":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -966,7 +1108,10 @@ Match = __decorate([
     Class.Describe()
 ], Match);
 exports.Match = Match;
-}},"@singleware/routing/router":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/routing/router":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -1219,39 +1364,88 @@ Router = __decorate([
     Class.Describe()
 ], Router);
 exports.Router = Router;
-}},"@singleware/application/index":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/application/aliases":{pack:false, invoke:function(exports, require){
+"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const Module = require("./main");
-exports.Main = Module.Main;
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
+ * This source code is licensed under the MIT License as described in the file LICENSE.
+ */
+const Routing = require("@singleware/routing");
+const Observable = require("@singleware/observable");
+/**
+ * Application request observer.
+ */
+exports.RequestSubject = Observable.Subject;
+/**
+ * Application router.
+ */
+exports.Router = Routing.Router;
+/**
+ * Application router.
+ */
+exports.Match = Routing.Match;
+//# sourceMappingURL=aliases.js.map
+}},
+"@singleware/application/index":{pack:false, invoke:function(exports, require){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
+ * This source code is licensed under the MIT License as described in the file LICENSE.
+ */
+var main_1 = require("./main");
+exports.Main = main_1.Main;
+var aliases_1 = require("./aliases");
+exports.Router = aliases_1.Router;
+exports.Match = aliases_1.Match;
+exports.RequestSubject = aliases_1.RequestSubject;
+// Declarations
+const main_2 = require("./main");
 /**
  * Decorates the specified member to filter an application request. (Alias for Main.Filter)
  * @param action Filter action settings.
  * @returns Returns the decorator method.
  */
-exports.Filter = (action) => exports.Main.Filter(action);
+exports.Filter = (action) => main_2.Main.Filter(action);
 /**
  * Decorates the specified member to process an application request. (Alias for Main.Processor)
  * @param action Route action settings.
  * @returns Returns the decorator method.
  */
-exports.Processor = (action) => exports.Main.Processor(action);
-}},"@singleware/application":{pack:true, invoke:function(exports, require){Object.assign(exports, require('index'));}},"@singleware/application/main":{pack:false, invoke:function(exports, require){"use strict";
+exports.Processor = (action) => main_2.Main.Processor(action);
+// Imported aliases.
+const Types = require("./types");
+/**
+ * Types namespace.
+ */
+exports.Types = Types;
+//# sourceMappingURL=index.js.map
+}},
+"@singleware/application":{pack:true, invoke:function(exports, require){
+Object.assign(exports, require('index'));
+}},
+"@singleware/application/main":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-Object.defineProperty(exports, "__esModule", { value: true });
 var Main_1;
+Object.defineProperty(exports, "__esModule", { value: true });
 "use strict";
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 const Class = require("@singleware/class");
 const Routing = require("@singleware/routing");
 const Injection = require("@singleware/injection");
+const Types = require("./types");
 /**
  * Generic main application class.
  */
@@ -1315,20 +1509,20 @@ let Main = Main_1 = class Main extends Class.Null {
         const copy = Object.freeze({ ...request });
         for (const logger of this.loggers) {
             switch (type) {
-                case 'receive':
+                case Types.Request.Receive:
                     logger.onReceive(copy);
                     break;
-                case 'process':
+                case Types.Request.Process:
                     logger.onProcess(copy);
                     break;
-                case 'send':
+                case Types.Request.Send:
                     logger.onSend(copy);
                     break;
-                case 'error':
+                case Types.Request.Error:
                     logger.onError(copy);
                     break;
                 default:
-                    throw new TypeError(`Request notification type '${type}' does not supported.`);
+                    throw new TypeError(`Request type '${type}' doesn't supported.`);
             }
         }
     }
@@ -1341,14 +1535,14 @@ let Main = Main_1 = class Main extends Class.Null {
     notifyAction(type) {
         for (const logger of this.loggers) {
             switch (type) {
-                case 'start':
+                case Types.Action.Start:
                     logger.onStart(void 0);
                     break;
-                case 'stop':
+                case Types.Action.Stop:
                     logger.onStop(void 0);
                     break;
                 default:
-                    throw new TypeError(`Action notification type '${type}' does not supported.`);
+                    throw new TypeError(`Action type '${type}' doesn't supported.`);
             }
         }
     }
@@ -1367,7 +1561,7 @@ let Main = Main_1 = class Main extends Class.Null {
         }
         catch (error) {
             match.detail.error = error;
-            this.notifyRequest('error', match.detail);
+            this.notifyRequest(Types.Request.Error, match.detail);
         }
         finally {
             return result;
@@ -1383,7 +1577,11 @@ let Main = Main_1 = class Main extends Class.Null {
         const local = request.environment.local;
         const match = this.filters.match(request.path, request);
         while (request.granted && match.length) {
-            request.environment.local = { ...variables, ...match.variables, ...local };
+            request.environment.local = {
+                ...variables,
+                ...match.variables,
+                ...local
+            };
             await match.next();
             request.environment.local = local;
         }
@@ -1394,38 +1592,41 @@ let Main = Main_1 = class Main extends Class.Null {
      * @param request Request information.
      */
     async receiveHandler(request) {
-        this.notifyRequest('receive', request);
+        this.notifyRequest(Types.Request.Receive, request);
         const local = request.environment.local;
         const match = this.processors.match(request.path, request);
         while (match.length && (await this.performFilters(request, match.variables))) {
-            request.environment.local = { ...match.variables, ...local };
+            request.environment.local = {
+                ...match.variables,
+                ...local
+            };
             await match.next();
             request.environment.local = local;
         }
-        this.notifyRequest('process', request);
+        this.notifyRequest(Types.Request.Process, request);
     }
     /**
      * Send handler.
      * @param request Request information.
      */
     async sendHandler(request) {
-        this.notifyRequest('send', request);
+        this.notifyRequest(Types.Request.Send, request);
     }
     /**
      * Error handler.
      * @param request Request information.
      */
     async errorHandler(request) {
-        this.notifyRequest('error', request);
+        this.notifyRequest(Types.Request.Error, request);
     }
     /**
      * Filter handler to be inherited and extended.
      * @param match Match information.
-     * @param allowed Determine whether the filter is allowing the request matching or not.
+     * @param allows Determine whether the filter is allowing the request matching or not.
      * @returns Returns true when the filter handler still allows the request matching or false otherwise.
      */
-    async filterHandler(match, allowed) {
-        return allowed;
+    async filterHandler(match, allows) {
+        return allows;
     }
     /**
      * Process handler to be inherited and extended.
@@ -1463,16 +1664,16 @@ let Main = Main_1 = class Main extends Class.Null {
         const routes = Main_1.routes.get(handler.prototype.constructor) || [];
         for (const route of routes) {
             switch (route.type) {
-                case 'filter':
+                case Types.Route.Filter:
                     this.filters.add({
                         ...route.action,
                         onMatch: async (match) => {
-                            const allowed = (await this.performHandler(handler, route.method, parameters, match)) === true;
-                            match.detail.granted = (await this.filterHandler(match, allowed)) && allowed === true;
+                            const allows = (await this.performHandler(handler, route.method, parameters, match)) === true;
+                            match.detail.granted = (await this.filterHandler(match, allows)) && allows === true;
                         }
                     });
                     break;
-                case 'processor':
+                case Types.Route.Processor:
                     this.processors.add({
                         ...route.action,
                         exact: route.action.exact === void 0 ? true : route.action.exact,
@@ -1524,9 +1725,9 @@ let Main = Main_1 = class Main extends Class.Null {
      */
     start() {
         if (this.started) {
-            throw new Error(`The application is already initialized.`);
+            throw new Error(`Application was already started.`);
         }
-        this.notifyAction('start');
+        this.notifyAction(Types.Action.Start);
         for (const service of this.services) {
             service.onReceive.subscribe(this.receiveHandlerListener);
             service.onSend.subscribe(this.sendHandlerListener);
@@ -1542,7 +1743,7 @@ let Main = Main_1 = class Main extends Class.Null {
      */
     stop() {
         if (!this.started) {
-            throw new Error(`The application is not initialized.`);
+            throw new Error(`Application wasn't started.`);
         }
         for (const service of this.services) {
             service.stop();
@@ -1551,7 +1752,7 @@ let Main = Main_1 = class Main extends Class.Null {
             service.onError.unsubscribe(this.errorHandlerListener);
         }
         this.started = false;
-        this.notifyAction('stop');
+        this.notifyAction(Types.Action.Stop);
         return this;
     }
     /**
@@ -1565,7 +1766,7 @@ let Main = Main_1 = class Main extends Class.Null {
                 throw new TypeError(`Only methods are allowed as filters.`);
             }
             this.addRoute(prototype.constructor, {
-                type: 'filter',
+                type: Types.Route.Filter,
                 action: action,
                 method: property
             });
@@ -1582,7 +1783,7 @@ let Main = Main_1 = class Main extends Class.Null {
                 throw new TypeError(`Only methods are allowed as processors.`);
             }
             this.addRoute(prototype.constructor, {
-                type: 'processor',
+                type: Types.Route.Processor,
                 action: action,
                 method: property
             });
@@ -1684,7 +1885,81 @@ Main = Main_1 = __decorate([
     Class.Describe()
 ], Main);
 exports.Main = Main;
-}},"@singleware/jsx/helpers/browser":{pack:false, invoke:function(exports, require){"use strict";
+//# sourceMappingURL=main.js.map
+}},
+"@singleware/application/types/action":{pack:false, invoke:function(exports, require){
+"use strict";
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
+ * This source code is licensed under the MIT License as described in the file LICENSE.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * Action types.
+ */
+var Action;
+(function (Action) {
+    Action["Start"] = "start";
+    Action["Stop"] = "stop";
+})(Action = exports.Action || (exports.Action = {}));
+//# sourceMappingURL=action.js.map
+}},
+"@singleware/application/types/index":{pack:false, invoke:function(exports, require){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
+ * This source code is licensed under the MIT License as described in the file LICENSE.
+ */
+var route_1 = require("./route");
+exports.Route = route_1.Route;
+var action_1 = require("./action");
+exports.Action = action_1.Action;
+var request_1 = require("./request");
+exports.Request = request_1.Request;
+//# sourceMappingURL=index.js.map
+}},
+"@singleware/application/types":{pack:true, invoke:function(exports, require){
+Object.assign(exports, require('index'));
+}},
+"@singleware/application/types/request":{pack:false, invoke:function(exports, require){
+"use strict";
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
+ * This source code is licensed under the MIT License as described in the file LICENSE.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * Request types.
+ */
+var Request;
+(function (Request) {
+    Request["Receive"] = "receive";
+    Request["Process"] = "process";
+    Request["Send"] = "send";
+    Request["Error"] = "error";
+})(Request = exports.Request || (exports.Request = {}));
+//# sourceMappingURL=request.js.map
+}},
+"@singleware/application/types/route":{pack:false, invoke:function(exports, require){
+"use strict";
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
+ * This source code is licensed under the MIT License as described in the file LICENSE.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * Route types.
+ */
+var Route;
+(function (Route) {
+    Route["Filter"] = "filter";
+    Route["Processor"] = "processor";
+})(Route = exports.Route || (exports.Route = {}));
+//# sourceMappingURL=route.js.map
+}},
+"@singleware/jsx/helpers/browser":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -1692,14 +1967,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 const Class = require("@singleware/class");
 const common_1 = require("./common");
 /**
- * Provides methods to help with Browser DOM.
+ * Provides methods to help Browser DOM.
  */
 let Helper = class Helper extends Class.Null {
     /**
@@ -1792,6 +2067,9 @@ let Helper = class Helper extends Class.Null {
                 if (node instanceof Node) {
                     this.append(parent, node);
                 }
+                else if (node instanceof Array) {
+                    this.append(parent, ...node);
+                }
                 else {
                     throw new TypeError(`Unsupported child type "${child}"`);
                 }
@@ -1824,7 +2102,6 @@ let Helper = class Helper extends Class.Null {
             parent.insertBefore(element.firstChild, element);
         }
         element.remove();
-        parent.normalize();
     }
     /**
      * Determines whether the specified node is child of the given parent element.
@@ -1921,7 +2198,7 @@ Helper.eventMap = [
     'onslotchange'
 ];
 /**
- * Renderer for temporary elements.
+ * Renderer for temp elements.
  */
 Helper.renderer = document.createElement('body');
 __decorate([
@@ -1961,7 +2238,10 @@ Helper = __decorate([
     Class.Describe()
 ], Helper);
 exports.Helper = Helper;
-}},"@singleware/jsx/helpers/common":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/jsx/helpers/common":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -1969,13 +2249,13 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 const Class = require("@singleware/class");
 /**
- * Provides any common methods to help with Browser and Text DOM.
+ * Provides any common methods to help Browser and Text DOM.
  */
 let Common = class Common extends Class.Null {
     /**
@@ -2008,17 +2288,26 @@ Common = __decorate([
     Class.Describe()
 ], Common);
 exports.Common = Common;
-}},"@singleware/jsx/helpers/index":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/jsx/helpers/index":{pack:false, invoke:function(exports, require){
+"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 const Browser = require("./browser");
 exports.Browser = Browser.Helper;
 const Text = require("./text");
 exports.Text = Text.Helper;
-}},"@singleware/jsx/helpers":{pack:true, invoke:function(exports, require){Object.assign(exports, require('index'));}},"@singleware/jsx/helpers/text":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/jsx/helpers":{pack:true, invoke:function(exports, require){
+Object.assign(exports, require('index'));
+}},
+"@singleware/jsx/helpers/text":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -2026,14 +2315,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 const Class = require("@singleware/class");
 const common_1 = require("./common");
 /**
- * Provides methods to help with Text DOM.
+ * Provides methods to help Text DOM.
  */
 let Helper = class Helper extends Class.Null {
     /**
@@ -2187,7 +2476,10 @@ Helper = __decorate([
     Class.Describe()
 ], Helper);
 exports.Helper = Helper;
-}},"@singleware/jsx/index":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/jsx/index":{pack:false, invoke:function(exports, require){
+"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * Current helper according to the environment.
@@ -2240,7 +2532,13 @@ exports.childOf = (parent, node) => Helper.childOf(parent, node);
  * @returns Returns the escaped input string.
  */
 exports.escape = (input) => Helper.escape(input);
-}},"@singleware/jsx":{pack:true, invoke:function(exports, require){Object.assign(exports, require('index'));}},"@singleware/path/helper":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/jsx":{pack:true, invoke:function(exports, require){
+Object.assign(exports, require('index'));
+}},
+"@singleware/path/helper":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -2248,8 +2546,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 const Class = require("@singleware/class");
@@ -2263,20 +2561,39 @@ let Helper = class Helper extends Class.Null {
      * @return Returns the normalized path.
      */
     static normalize(path) {
-        const pieces = path.split(this.separator);
-        const newer = [];
-        for (let i = 0; i < pieces.length; ++i) {
-            const directory = pieces[i];
-            if (i === 0 || i + 1 === pieces.length || (directory.length && directory !== '.')) {
-                if (directory === '..') {
-                    newer.pop();
+        if (path.length > 0) {
+            const pieces = path.split(this.separator);
+            const length = pieces.length;
+            const newer = [];
+            let last;
+            for (let offset = 0; offset < length; ++offset) {
+                const part = pieces[offset];
+                if (newer.length === 0) {
+                    newer.push((last = part));
                 }
-                else {
-                    newer.push(directory);
+                else if (part !== '.') {
+                    if (part === '..' && part !== last) {
+                        if (last !== '') {
+                            newer.pop();
+                            last = newer[newer.length - 1];
+                        }
+                    }
+                    else if (part.length > 0) {
+                        if (last === '.') {
+                            newer[newer.length - 1] = last = part;
+                        }
+                        else {
+                            newer.push((last = part));
+                        }
+                    }
+                    else if (offset + 1 === length) {
+                        newer.push((last = part));
+                    }
                 }
             }
+            return newer.join(this.separator);
         }
-        return newer.join(this.separator);
+        return '.';
     }
     /**
      * Join the specified path list.
@@ -2294,7 +2611,7 @@ let Helper = class Helper extends Class.Null {
     static resolve(...paths) {
         let resolved = '';
         for (const path of paths) {
-            resolved = path[0] === this.separator ? path : this.join(resolved, path);
+            resolved = path[0] === this.separator ? this.normalize(path) : this.join(resolved, path);
         }
         return resolved;
     }
@@ -2355,10 +2672,13 @@ Helper = __decorate([
     Class.Describe()
 ], Helper);
 exports.Helper = Helper;
-}},"@singleware/path/index":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/path/index":{pack:false, invoke:function(exports, require){
+"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * Copyright (C) 2018 Silas B. Domingos
+/*
+ * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 const helper_1 = require("./helper");
@@ -2398,15 +2718,37 @@ exports.basename = (path) => helper_1.Helper.basename(path);
  * @returns Returns the extension name.
  */
 exports.extname = (path) => helper_1.Helper.extname(path);
-}},"@singleware/path":{pack:true, invoke:function(exports, require){Object.assign(exports, require('index'));}},"source/index":{pack:false, invoke:function(exports, require){"use strict";
+
+}},
+"@singleware/path":{pack:true, invoke:function(exports, require){
+Object.assign(exports, require('index'));
+}},
+"source/aliases":{pack:false, invoke:function(exports, require){
+"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const Services = require("./services");
-exports.Services = Services;
-const Module = require("./main");
-exports.Main = Module.Main;
-/**
- * Declarations.
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
+ * This source code is licensed under the MIT License as described in the file LICENSE.
  */
+const Application = require("@singleware/application");
+/**
+ * Application match.
+ */
+exports.Match = Application.Match;
+//# sourceMappingURL=aliases.js.map
+}},
+"source/index":{pack:false, invoke:function(exports, require){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
+ * This source code is licensed under the MIT License as described in the file LICENSE.
+ */
+var main_1 = require("./main");
+exports.Main = main_1.Main;
+var aliases_1 = require("./aliases");
+exports.Match = aliases_1.Match;
+// Declarations.
 const Application = require("@singleware/application");
 /**
  * Decorates the specified member to filter an application request. (Alias for Main.Filter)
@@ -2420,7 +2762,19 @@ exports.Filter = (action) => Application.Main.Filter(action);
  * @returns Returns the decorator method.
  */
 exports.Processor = (action) => Application.Main.Processor(action);
-}},"source":{pack:true, invoke:function(exports, require){Object.assign(exports, require('index'));}},"source/main":{pack:false, invoke:function(exports, require){"use strict";
+// Imported aliases.
+const Services = require("./services");
+/**
+ * Services namespace.
+ */
+exports.Services = Services;
+//# sourceMappingURL=index.js.map
+}},
+"source":{pack:true, invoke:function(exports, require){
+Object.assign(exports, require('index'));
+}},
+"source/main":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -2428,7 +2782,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
@@ -2525,7 +2879,9 @@ let Main = class Main extends Application.Main {
             this.setScripts(request.output);
             this.setStyles(request.output);
             JSX.append(JSX.clear(this.settings.body || document.body), request.output.content);
-            history.pushState(match.variables.state, document.title, match.detail.path);
+            if (request.environment.local.state) {
+                history.pushState(match.variables.state, document.title, match.detail.path);
+            }
         }
     }
 };
@@ -2557,7 +2913,10 @@ Main = __decorate([
     Class.Describe()
 ], Main);
 exports.Main = Main;
-}},"source/services/client":{pack:false, invoke:function(exports, require){"use strict";
+//# sourceMappingURL=main.js.map
+}},
+"source/services/client":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -2565,7 +2924,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
@@ -2583,10 +2942,6 @@ let Client = class Client extends Class.Null {
     constructor(settings) {
         super();
         /**
-         * Navigator instance.
-         */
-        this.navigation = new navigator_1.Navigator(this);
-        /**
          * Receive subject instance.
          */
         this.receiveSubject = new Observable.Subject();
@@ -2599,6 +2954,7 @@ let Client = class Client extends Class.Null {
          */
         this.errorSubject = new Observable.Subject();
         this.settings = settings;
+        this.navigation = new navigator_1.Navigator(this, this.settings.path || location.pathname);
     }
     /**
      * Gets the current opened path.
@@ -2634,7 +2990,7 @@ let Client = class Client extends Class.Null {
      * Starts the service.
      */
     start() {
-        this.navigation.open(this.settings.path || location.pathname);
+        this.navigation.reload();
     }
     /**
      * Stops the service.
@@ -2681,9 +3037,12 @@ Client = __decorate([
     Class.Describe()
 ], Client);
 exports.Client = Client;
-}},"source/services/index":{pack:false, invoke:function(exports, require){"use strict";
+//# sourceMappingURL=client.js.map
+}},
+"source/services/index":{pack:false, invoke:function(exports, require){
+"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
@@ -2691,7 +3050,13 @@ var client_1 = require("./client");
 exports.Client = client_1.Client;
 var navigator_1 = require("./navigator");
 exports.Navigator = navigator_1.Navigator;
-}},"source/services":{pack:true, invoke:function(exports, require){Object.assign(exports, require('index'));}},"source/services/navigator":{pack:false, invoke:function(exports, require){"use strict";
+//# sourceMappingURL=index.js.map
+}},
+"source/services":{pack:true, invoke:function(exports, require){
+Object.assign(exports, require('index'));
+}},
+"source/services/navigator":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -2699,7 +3064,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
@@ -2712,37 +3077,59 @@ let Navigator = class Navigator extends Class.Null {
     /**
      * Default constructor.
      * @param client Client instance.
+     * @param path Initial path.
      */
-    constructor(client) {
+    constructor(client, path) {
         super();
-        /**
-         * Current opened path.
-         */
-        this.openedPath = '';
+        globalThis.addEventListener('popstate', this.popStateHandler.bind(this));
         this.client = client;
+        this.current = path;
     }
     /**
-     * Current opened path.
+     * Renders the specified path according to the given state.
+     * @param path Path to be rendered.
+     * @param state Determines whether the renderer will preserves the current state.
+     */
+    renderPath(path, state) {
+        this.client.onReceive.notifyAll({
+            path: path,
+            input: {},
+            output: {},
+            environment: {
+                local: {
+                    state: state
+                },
+                shared: {}
+            },
+            granted: true
+        });
+    }
+    /**
+     * Pop State, event handler.
+     */
+    popStateHandler() {
+        this.current = document.location.pathname;
+        this.renderPath(document.location.pathname, false);
+    }
+    /**
+     * Gets the current path.
      */
     get path() {
-        return this.openedPath;
+        return this.current;
     }
     /**
      * Opens the specified path.
      * @param path Path to be opened.
      */
     open(path) {
-        this.openedPath = Path.resolve(Path.dirname(this.openedPath), path);
-        this.client.onReceive.notifyAll({
-            path: this.openedPath,
-            input: {},
-            output: {},
-            environment: {
-                local: {},
-                shared: {}
-            },
-            granted: true
-        });
+        this.current = Path.resolve(Path.dirname(this.current), path);
+        this.renderPath(this.current, true);
+    }
+    /**
+     * Reopens the current path.
+     */
+    reload() {
+        this.renderPath(this.current, false);
     }
 };
 __decorate([
@@ -2750,18 +3137,30 @@ __decorate([
 ], Navigator.prototype, "client", void 0);
 __decorate([
     Class.Private()
-], Navigator.prototype, "openedPath", void 0);
+], Navigator.prototype, "current", void 0);
+__decorate([
+    Class.Private()
+], Navigator.prototype, "renderPath", null);
+__decorate([
+    Class.Private()
+], Navigator.prototype, "popStateHandler", null);
 __decorate([
     Class.Public()
 ], Navigator.prototype, "path", null);
 __decorate([
     Class.Public()
 ], Navigator.prototype, "open", null);
+__decorate([
+    Class.Public()
+], Navigator.prototype, "reload", null);
 Navigator = __decorate([
     Class.Describe()
 ], Navigator);
 exports.Navigator = Navigator;
-}},"./browser":{pack:false, invoke:function(exports, require){"use strict";
+//# sourceMappingURL=navigator.js.map
+}},
+"./browser":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -2769,7 +3168,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
@@ -2803,7 +3202,10 @@ Example = __decorate([
 ], Example);
 // Starts the application.
 const instance = new Example();
-}},"./handler":{pack:false, invoke:function(exports, require){"use strict";
+//# sourceMappingURL=browser.js.map
+}},
+"./handler":{pack:false, invoke:function(exports, require){
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -2811,7 +3213,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
@@ -2879,48 +3281,7 @@ Handler = __decorate([
     Class.Describe()
 ], Handler);
 exports.Handler = Handler;
-}},"./main":{pack:false, invoke:function(exports, require){"use strict";
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-/*
- * Copyright (C) 2018 Silas B. Domingos
- * This source code is licensed under the MIT License as described in the file LICENSE.
- */
-const Class = require("@singleware/class");
-const Frontend = require("../../source");
-const handler_1 = require("./handler");
-/**
- * Browser client, example class.
- */
-let Example = class Example extends Frontend.Main {
-    /**
-     * Default constructor.
-     */
-    constructor() {
-        super({
-            title: {
-                text: 'Example',
-                separator: ' - '
-            }
-        });
-        // Add the client service.
-        this.addService(new Frontend.Services.Client({}));
-        // Add the page handler.
-        this.addHandler(handler_1.Handler);
-        // Automatic start.
-        this.start();
-    }
-};
-Example = __decorate([
-    Class.Describe()
-], Example);
-// Starts the application.
-const instance = new Example();
+//# sourceMappingURL=handler.js.map
 }}};
 
   /**

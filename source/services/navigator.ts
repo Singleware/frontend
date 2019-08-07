@@ -1,4 +1,4 @@
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
@@ -19,26 +19,59 @@ export class Navigator extends Class.Null {
   private client: Client;
 
   /**
-   * Current opened path.
+   * Current path.
    */
   @Class.Private()
-  private openedPath: string = '';
+  private current: string;
+
+  /**
+   * Renders the specified path according to the given state.
+   * @param path Path to be rendered.
+   * @param state Determines whether the renderer will preserves the current state.
+   */
+  @Class.Private()
+  private renderPath(path: string, state: boolean): void {
+    this.client.onReceive.notifyAll({
+      path: path,
+      input: {},
+      output: {},
+      environment: {
+        local: {
+          state: state
+        },
+        shared: {}
+      },
+      granted: true
+    });
+  }
+
+  /**
+   * Pop State, event handler.
+   */
+  @Class.Private()
+  private popStateHandler(): void {
+    this.current = document.location.pathname;
+    this.renderPath(document.location.pathname, false);
+  }
 
   /**
    * Default constructor.
    * @param client Client instance.
+   * @param path Initial path.
    */
-  constructor(client: Client) {
+  constructor(client: Client, path: string) {
     super();
+    globalThis.addEventListener('popstate', this.popStateHandler.bind(this));
     this.client = client;
+    this.current = path;
   }
 
   /**
-   * Current opened path.
+   * Gets the current path.
    */
   @Class.Public()
   public get path(): string {
-    return this.openedPath;
+    return this.current;
   }
 
   /**
@@ -47,16 +80,15 @@ export class Navigator extends Class.Null {
    */
   @Class.Public()
   public open(path: string): void {
-    this.openedPath = Path.resolve(Path.dirname(this.openedPath), path);
-    this.client.onReceive.notifyAll({
-      path: this.openedPath,
-      input: {},
-      output: {},
-      environment: {
-        local: {},
-        shared: {}
-      },
-      granted: true
-    });
+    this.current = Path.resolve(Path.dirname(this.current), path);
+    this.renderPath(this.current, true);
+  }
+
+  /**
+   * Reopens the current path.
+   */
+  @Class.Public()
+  public reload(): void {
+    this.renderPath(this.current, false);
   }
 }

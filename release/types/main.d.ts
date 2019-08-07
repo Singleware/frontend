@@ -1,5 +1,5 @@
 import * as Application from '@singleware/application';
-import * as Types from './types';
+import * as Aliases from './aliases';
 import { Input } from './input';
 import { Output } from './output';
 import { Settings } from './settings';
@@ -44,7 +44,7 @@ export declare class Main extends Application.Main<Input, Output> {
      * @param match Matched routes.
      * @param callback Handler callback.
      */
-    protected processHandler(match: Types.Match, callback: Types.Callable): Promise<void>;
+    protected processHandler(match: Aliases.Match, callback: Aliases.Callable): Promise<void>;
     /**
      * Default constructor.
      * @param settings Application settings.

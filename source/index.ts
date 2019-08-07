@@ -1,23 +1,16 @@
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
+export { Main } from './main';
 export { Title } from './title';
-export { Match } from './types';
 export { Input } from './input';
 export { Output } from './output';
+export { Request, Match } from './aliases';
 
-import * as Services from './services';
-export import Services = Services;
-
-import * as Module from './main';
-export import Main = Module.Main;
-
-/**
- * Declarations.
- */
+// Declarations.
 import * as Application from '@singleware/application';
-import { MemberDecorator } from './types';
+import { MemberDecorator } from './aliases';
 
 /**
  * Decorates the specified member to filter an application request. (Alias for Main.Filter)
@@ -32,3 +25,11 @@ export const Filter = (action: Application.Action): MemberDecorator => Applicati
  * @returns Returns the decorator method.
  */
 export const Processor = (action: Application.Action): MemberDecorator => Application.Main.Processor(action);
+
+// Imported aliases.
+import * as Services from './services';
+
+/**
+ * Services namespace.
+ */
+export import Services = Services;

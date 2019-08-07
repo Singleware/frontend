@@ -1,4 +1,4 @@
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
@@ -26,3 +26,8 @@ export type Request = Application.Request<Input, Output>;
  * Type declaration for route match.
  */
 export type Match = Application.Match<Input, Output>;
+
+/**
+ * Application match.
+ */
+export const Match = Application.Match;

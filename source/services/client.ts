@@ -1,4 +1,4 @@
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
@@ -6,7 +6,7 @@ import * as Class from '@singleware/class';
 import * as Observable from '@singleware/observable';
 import * as Application from '@singleware/application';
 
-import * as Types from '../types';
+import * as Aliases from '../aliases';
 
 import { Input } from '../input';
 import { Output } from '../output';
@@ -28,25 +28,25 @@ export class Client extends Class.Null implements Application.Service<Input, Out
    * Navigator instance.
    */
   @Class.Private()
-  private navigation = new Navigator(this);
+  private navigation: Navigator;
 
   /**
    * Receive subject instance.
    */
   @Class.Private()
-  private receiveSubject = new Observable.Subject<Types.Request>();
+  private receiveSubject = new Observable.Subject<Aliases.Request>();
 
   /**
    * Send subject instance.
    */
   @Class.Private()
-  private sendSubject = new Observable.Subject<Types.Request>();
+  private sendSubject = new Observable.Subject<Aliases.Request>();
 
   /**
    * Error subject instance.
    */
   @Class.Private()
-  private errorSubject = new Observable.Subject<Types.Request>();
+  private errorSubject = new Observable.Subject<Aliases.Request>();
 
   /**
    * Default constructor.
@@ -55,6 +55,7 @@ export class Client extends Class.Null implements Application.Service<Input, Out
   constructor(settings: Settings) {
     super();
     this.settings = settings;
+    this.navigation = new Navigator(this, this.settings.path || location.pathname);
   }
 
   /**
@@ -77,7 +78,7 @@ export class Client extends Class.Null implements Application.Service<Input, Out
    * Receive request event.
    */
   @Class.Public()
-  public get onReceive(): Observable.Subject<Types.Request> {
+  public get onReceive(): Observable.Subject<Aliases.Request> {
     return this.receiveSubject;
   }
 
@@ -85,7 +86,7 @@ export class Client extends Class.Null implements Application.Service<Input, Out
    * Send response event.
    */
   @Class.Public()
-  public get onSend(): Observable.Subject<Types.Request> {
+  public get onSend(): Observable.Subject<Aliases.Request> {
     return this.sendSubject;
   }
 
@@ -93,7 +94,7 @@ export class Client extends Class.Null implements Application.Service<Input, Out
    * Error response event.
    */
   @Class.Public()
-  public get onError(): Observable.Subject<Types.Request> {
+  public get onError(): Observable.Subject<Aliases.Request> {
     return this.errorSubject;
   }
 
@@ -102,7 +103,7 @@ export class Client extends Class.Null implements Application.Service<Input, Out
    */
   @Class.Public()
   public start(): void {
-    this.navigation.open(this.settings.path || location.pathname);
+    this.navigation.reload();
   }
 
   /**

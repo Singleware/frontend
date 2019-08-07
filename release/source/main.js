@@ -6,7 +6,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/*
+/*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
@@ -103,7 +103,9 @@ let Main = class Main extends Application.Main {
             this.setScripts(request.output);
             this.setStyles(request.output);
             JSX.append(JSX.clear(this.settings.body || document.body), request.output.content);
-            history.pushState(match.variables.state, document.title, match.detail.path);
+            if (request.environment.local.state) {
+                history.pushState(match.variables.state, document.title, match.detail.path);
+            }
         }
     }
 };
@@ -135,3 +137,4 @@ Main = __decorate([
     Class.Describe()
 ], Main);
 exports.Main = Main;
+//# sourceMappingURL=main.js.map
