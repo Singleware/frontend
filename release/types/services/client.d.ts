@@ -42,23 +42,23 @@ export declare class Client extends Class.Null implements Application.Service<In
     /**
      * Gets the current opened path.
      */
-    readonly path: string;
+    get path(): string;
     /**
      * Gets the navigator instance.
      */
-    readonly navigator: Navigator;
+    get navigator(): Navigator;
     /**
      * Receive request event.
      */
-    readonly onReceive: Observable.Subject<Aliases.Request>;
+    get onReceive(): Observable.Subject<Aliases.Request>;
     /**
      * Send response event.
      */
-    readonly onSend: Observable.Subject<Aliases.Request>;
+    get onSend(): Observable.Subject<Aliases.Request>;
     /**
      * Error response event.
      */
-    readonly onError: Observable.Subject<Aliases.Request>;
+    get onError(): Observable.Subject<Aliases.Request>;
     /**
      * Starts the service.
      */

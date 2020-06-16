@@ -3,7 +3,14 @@
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 
+import { Search } from './search';
+
 /**
  * Application input interface.
  */
-export interface Input {}
+export interface Input {
+  /**
+   * Request search.
+   */
+  search: Search;
+}

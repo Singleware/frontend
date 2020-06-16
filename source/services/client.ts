@@ -10,6 +10,7 @@ import * as Aliases from '../aliases';
 
 import { Input } from '../input';
 import { Output } from '../output';
+import { Helper } from '../helper';
 import { Settings } from './settings';
 import { Navigator } from './navigator';
 
@@ -55,7 +56,11 @@ export class Client extends Class.Null implements Application.Service<Input, Out
   constructor(settings: Settings) {
     super();
     this.settings = settings;
-    this.navigation = new Navigator(this, this.settings.path || location.pathname);
+    this.navigation = new Navigator(
+      this,
+      settings.path || location.pathname,
+      settings.search || Helper.parseURLSearch(document.location.search.substr(1))
+    );
   }
 
   /**

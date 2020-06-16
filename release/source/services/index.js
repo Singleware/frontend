@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 var client_1 = require("./client");
-exports.Client = client_1.Client;
+Object.defineProperty(exports, "Client", { enumerable: true, get: function () { return client_1.Client; } });
 var navigator_1 = require("./navigator");
-exports.Navigator = navigator_1.Navigator;
+Object.defineProperty(exports, "Navigator", { enumerable: true, get: function () { return navigator_1.Navigator; } });
 //# sourceMappingURL=index.js.map

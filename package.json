@@ -7,7 +7,7 @@
   "name": "@singleware/frontend",
   "description": "Singleware frontend project package.",
   "license": "MIT",
-  "version": "1.2.9",
+  "version": "1.2.11",
   "main": "release/source/index.js",
   "types": "release/types/index.d.ts",
   "keywords": [
@@ -24,18 +24,18 @@
   "dependencies": {
     "@singleware/application": "^1.2.10",
     "@singleware/class": "^1.1.19",
-    "@singleware/jsx": "^1.0.28",
+    "@singleware/jsx": "^1.0.32",
     "@singleware/path": "^1.0.7"
   },
   "devDependencies": {
-    "@singleware/backend": "^1.2.24",
-    "@singleware/bundler": "^1.0.24",
-    "@types/node": "^11.13.19",
-    "prettier": "^1.18.2",
-    "typescript": "^3.5.3"
+    "@singleware/backend": "^1.2.26",
+    "@singleware/bundler": "^1.0.29",
+    "@types/node": "^11.15.16",
+    "prettier": "^1.19.1",
+    "typescript": "^3.9.5"
   },
   "prettier": {
-    "printWidth": 140,
+    "printWidth": 125,
     "tabWidth": 2,
     "singleQuote": true,
     "semi": true

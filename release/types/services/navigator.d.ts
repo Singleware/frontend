@@ -3,6 +3,7 @@
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 import * as Class from '@singleware/class';
+import { Search } from '../search';
 import { Client } from './client';
 /**
  * Front-end navigator class.
@@ -15,10 +16,15 @@ export declare class Navigator extends Class.Null {
     /**
      * Current path.
      */
-    private current;
+    private currentPath;
+    /**
+     * Current search.
+     */
+    private currentSearch;
     /**
      * Renders the specified path according to the given state.
      * @param path Path to be rendered.
+     * @param search Search arguments.
      * @param state Determines whether the renderer will preserves the current state.
      */
     private renderPath;
@@ -30,17 +36,23 @@ export declare class Navigator extends Class.Null {
      * Default constructor.
      * @param client Client instance.
      * @param path Initial path.
+     * @param search Initial search.
      */
-    constructor(client: Client, path: string);
+    constructor(client: Client, path: string, search?: Search);
     /**
      * Gets the current path.
      */
-    readonly path: string;
+    get path(): string;
+    /**
+     * Gets the current search.
+     */
+    get search(): Search;
     /**
      * Opens the specified path.
      * @param path Path to be opened.
+     * @param search Search arguments.
      */
-    open(path: string): void;
+    open(path: string, search?: Search): void;
     /**
      * Reopens the current path.
      */

@@ -6,12 +6,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Client = void 0;
 /*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 const Class = require("@singleware/class");
 const Observable = require("@singleware/observable");
+const helper_1 = require("../helper");
 const navigator_1 = require("./navigator");
 /**
  * Front-end client class.
@@ -36,7 +38,7 @@ let Client = class Client extends Class.Null {
          */
         this.errorSubject = new Observable.Subject();
         this.settings = settings;
-        this.navigation = new navigator_1.Navigator(this, this.settings.path || location.pathname);
+        this.navigation = new navigator_1.Navigator(this, settings.path || location.pathname, settings.search || helper_1.Helper.parseURLSearch(document.location.search.substr(1)));
     }
     /**
      * Gets the current opened path.

@@ -1,13 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Services = exports.Processor = exports.Filter = void 0;
 /*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 var main_1 = require("./main");
-exports.Main = main_1.Main;
+Object.defineProperty(exports, "Main", { enumerable: true, get: function () { return main_1.Main; } });
 var aliases_1 = require("./aliases");
-exports.Match = aliases_1.Match;
+Object.defineProperty(exports, "Match", { enumerable: true, get: function () { return aliases_1.Match; } });
 // Declarations.
 const Application = require("@singleware/application");
 /**

@@ -1,24 +1,150 @@
-/*
- * Copyright (C) 2018-2019 Silas B. Domingos
+/*!
+ * Copyright (C) 2018-2020 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 'use strict';
 var Loader;
 (function(Loader) {
   /**
-   * All loaded modules.
+   * Loaded modules.
    */
   const cache = {};
 
   /**
-   * All loading locations.
+   * Modules repository.
+   */
+  const repository = {};
+
+  /**
+   * Loading locations.
    */
   const loading = [];
 
   /**
-   * All modules repository.
+   * Get the directory name of the specified path.
+   * @param path Path.
+   * @returns Returns the directory name.
    */
-  const repository = {"@singleware/class/exception":{pack:false, invoke:function(exports, require){
+  function dirname(path) {
+    const output = normalize(path).split('/');
+    return output.splice(0, output.length - 1).join('/');
+  }
+
+  /**
+   * Get the normalized path from the specified path.
+   * @param path Path.
+   * @return Returns the normalized path.
+   */
+  function normalize(path) {
+    const input = path.split('/');
+    const output = [];
+    for (let i = 0; i < input.length; ++i) {
+      const directory = input[i];
+      if (i === 0 || (directory.length && directory !== '.')) {
+        if (directory === '..') {
+          output.pop();
+        } else {
+          output.push(directory);
+        }
+      }
+    }
+    return output.join('/');
+  }
+
+  /**
+   * Load the module that corresponds to the specified location.
+   * @param location Module location.
+   * @returns Returns all exported members.
+   */
+  function loadModule(location) {
+    const baseDir = Loader.baseDirectory;
+    const source = repository[location];
+    const module = {
+      loaded: false,
+      filename: location,
+      path: dirname(location),
+      exports: cache[location]
+    };
+    let caught;
+    try {
+      Loader.baseDirectory = source.pack ? module.filename : module.path;
+      loading.push(location);
+      source.invoke(module, module.exports, require);
+      module.loaded = true;
+    } catch (exception) {
+      caught = exception;
+    } finally {
+      Loader.baseDirectory = baseDir;
+      loading.pop();
+      if (caught) {
+        throw caught;
+      }
+      return module.exports;
+    }
+  }
+
+  /**
+   * Require the module that corresponds to the specified path.
+   * @param path Module path.
+   * @returns Returns all exported members.
+   * @throws Throws an error when the specified module doesn't exists.
+   */
+  function require(path) {
+    const relative = path[0] === '.';
+    const location = normalize(relative ? `${Loader.baseDirectory}/${path}` : path);
+    if (!cache[location]) {
+      if (!repository[location]) {
+        const current = loading[loading.length - 1] || '.';
+        throw new Error(`Module "${path}" required by "${current}" doesn't found.`);
+      }
+      cache[location] = {};
+      return loadModule(location);
+    }
+    return cache[location];
+  }
+
+  /**
+   * Register new modules into the loader.
+   * @param modules Modules object.
+   */
+  function register(modules) {
+    for (const entry in modules) {
+      if (!(entry in repository)) {
+        repository[entry] = modules[entry];
+      }
+    }
+  }
+
+  // Setup the loader.
+  if (!window.require) {
+    // Set the default directory.
+    Loader.baseDirectory = '.';
+    // Set all properties.
+    Object.defineProperties(window, {
+      require: {
+        value: require,
+        configurable: false,
+        writable: false
+      },
+      Loader: {
+        value: Loader,
+        configurable: false,
+        writable: false
+      }
+    });
+  }
+
+  // Set the loader method.
+  Object.defineProperties(Loader, {
+    register: {
+      value: register,
+      configurable: false,
+      writable: false
+    }
+  });
+
+  // Register all modules.
+  window.Loader.register({"@singleware/class/exception":{pack:false, invoke:function(module, exports, require){
 "use strict";
 /**
  * Copyright (C) 2018 Silas B. Domingos
@@ -33,7 +159,7 @@ class Exception extends Error {
 exports.Exception = Exception;
 
 }},
-"@singleware/class/helper":{pack:false, invoke:function(exports, require){
+"@singleware/class/helper":{pack:false, invoke:function(module, exports, require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const exception_1 = require("./exception");
@@ -394,7 +520,7 @@ var Helper;
 })(Helper = exports.Helper || (exports.Helper = {}));
 
 }},
-"@singleware/class/index":{pack:false, invoke:function(exports, require){
+"@singleware/class/index":{pack:false, invoke:function(module, exports, require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var exception_1 = require("./exception");
@@ -449,10 +575,10 @@ exports.perform = async (context, callback, ...parameters) => helper_1.Helper.pe
 exports.resolve = (context) => helper_1.Helper.resolve(context);
 
 }},
-"@singleware/class":{pack:true, invoke:function(exports, require){
-Object.assign(exports, require('index'));
+"@singleware/class":{pack:true, invoke:function(module, exports, require){
+Object.assign(exports, require('./index'));
 }},
-"@singleware/injection/index":{pack:false, invoke:function(exports, require){
+"@singleware/injection/index":{pack:false, invoke:function(module, exports, require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 /*!
@@ -494,10 +620,10 @@ exports.resolve = (type) => global.resolve(type);
 exports.construct = (type, ...parameters) => global.construct(type, ...parameters);
 
 }},
-"@singleware/injection":{pack:true, invoke:function(exports, require){
-Object.assign(exports, require('index'));
+"@singleware/injection":{pack:true, invoke:function(module, exports, require){
+Object.assign(exports, require('./index'));
 }},
-"@singleware/injection/manager":{pack:false, invoke:function(exports, require){
+"@singleware/injection/manager":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -713,17 +839,17 @@ Manager = __decorate([
 exports.Manager = Manager;
 
 }},
-"@singleware/observable/index":{pack:false, invoke:function(exports, require){
+"@singleware/observable/index":{pack:false, invoke:function(module, exports, require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var subject_1 = require("./subject");
 exports.Subject = subject_1.Subject;
 
 }},
-"@singleware/observable":{pack:true, invoke:function(exports, require){
-Object.assign(exports, require('index'));
+"@singleware/observable":{pack:true, invoke:function(module, exports, require){
+Object.assign(exports, require('./index'));
 }},
-"@singleware/observable/subject":{pack:false, invoke:function(exports, require){
+"@singleware/observable/subject":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -860,7 +986,7 @@ Subject = Subject_1 = __decorate([
 exports.Subject = Subject;
 
 }},
-"@singleware/pipeline/index":{pack:false, invoke:function(exports, require){
+"@singleware/pipeline/index":{pack:false, invoke:function(module, exports, require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 /**
@@ -871,10 +997,10 @@ var subject_1 = require("./subject");
 exports.Subject = subject_1.Subject;
 
 }},
-"@singleware/pipeline":{pack:true, invoke:function(exports, require){
-Object.assign(exports, require('index'));
+"@singleware/pipeline":{pack:true, invoke:function(module, exports, require){
+Object.assign(exports, require('./index'));
 }},
-"@singleware/pipeline/subject":{pack:false, invoke:function(exports, require){
+"@singleware/pipeline/subject":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -960,7 +1086,7 @@ Subject = __decorate([
 exports.Subject = Subject;
 
 }},
-"@singleware/routing/index":{pack:false, invoke:function(exports, require){
+"@singleware/routing/index":{pack:false, invoke:function(module, exports, require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var match_1 = require("./match");
@@ -969,10 +1095,10 @@ var router_1 = require("./router");
 exports.Router = router_1.Router;
 
 }},
-"@singleware/routing":{pack:true, invoke:function(exports, require){
-Object.assign(exports, require('index'));
+"@singleware/routing":{pack:true, invoke:function(module, exports, require){
+Object.assign(exports, require('./index'));
 }},
-"@singleware/routing/match":{pack:false, invoke:function(exports, require){
+"@singleware/routing/match":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -1110,7 +1236,7 @@ Match = __decorate([
 exports.Match = Match;
 
 }},
-"@singleware/routing/router":{pack:false, invoke:function(exports, require){
+"@singleware/routing/router":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -1366,7 +1492,7 @@ Router = __decorate([
 exports.Router = Router;
 
 }},
-"@singleware/application/aliases":{pack:false, invoke:function(exports, require){
+"@singleware/application/aliases":{pack:false, invoke:function(module, exports, require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 /*!
@@ -1389,7 +1515,7 @@ exports.Router = Routing.Router;
 exports.Match = Routing.Match;
 //# sourceMappingURL=aliases.js.map
 }},
-"@singleware/application/index":{pack:false, invoke:function(exports, require){
+"@singleware/application/index":{pack:false, invoke:function(module, exports, require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 /*!
@@ -1424,10 +1550,10 @@ const Types = require("./types");
 exports.Types = Types;
 //# sourceMappingURL=index.js.map
 }},
-"@singleware/application":{pack:true, invoke:function(exports, require){
-Object.assign(exports, require('index'));
+"@singleware/application":{pack:true, invoke:function(module, exports, require){
+Object.assign(exports, require('./index'));
 }},
-"@singleware/application/main":{pack:false, invoke:function(exports, require){
+"@singleware/application/main":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -1887,7 +2013,7 @@ Main = Main_1 = __decorate([
 exports.Main = Main;
 //# sourceMappingURL=main.js.map
 }},
-"@singleware/application/types/action":{pack:false, invoke:function(exports, require){
+"@singleware/application/types/action":{pack:false, invoke:function(module, exports, require){
 "use strict";
 /*!
  * Copyright (C) 2018-2019 Silas B. Domingos
@@ -1904,7 +2030,7 @@ var Action;
 })(Action = exports.Action || (exports.Action = {}));
 //# sourceMappingURL=action.js.map
 }},
-"@singleware/application/types/index":{pack:false, invoke:function(exports, require){
+"@singleware/application/types/index":{pack:false, invoke:function(module, exports, require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 /*!
@@ -1919,10 +2045,10 @@ var request_1 = require("./request");
 exports.Request = request_1.Request;
 //# sourceMappingURL=index.js.map
 }},
-"@singleware/application/types":{pack:true, invoke:function(exports, require){
-Object.assign(exports, require('index'));
+"@singleware/application/types":{pack:true, invoke:function(module, exports, require){
+Object.assign(exports, require('./index'));
 }},
-"@singleware/application/types/request":{pack:false, invoke:function(exports, require){
+"@singleware/application/types/request":{pack:false, invoke:function(module, exports, require){
 "use strict";
 /*!
  * Copyright (C) 2018-2019 Silas B. Domingos
@@ -1941,7 +2067,7 @@ var Request;
 })(Request = exports.Request || (exports.Request = {}));
 //# sourceMappingURL=request.js.map
 }},
-"@singleware/application/types/route":{pack:false, invoke:function(exports, require){
+"@singleware/application/types/route":{pack:false, invoke:function(module, exports, require){
 "use strict";
 /*!
  * Copyright (C) 2018-2019 Silas B. Domingos
@@ -1958,7 +2084,7 @@ var Route;
 })(Route = exports.Route || (exports.Route = {}));
 //# sourceMappingURL=route.js.map
 }},
-"@singleware/jsx/helpers/browser":{pack:false, invoke:function(exports, require){
+"@singleware/jsx/helpers/browser":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -2058,7 +2184,11 @@ let Helper = class Helper extends Class.Null {
             else if (child instanceof NodeList || child instanceof Array) {
                 this.append(parent, ...child);
             }
-            else if (typeof child === 'string' || typeof child === 'number') {
+            else if (typeof child === 'string' ||
+                typeof child === 'number' ||
+                (((child instanceof Function && child.toString !== Object.toString) ||
+                    (child instanceof Object && child.toString !== Object.prototype.toString)) &&
+                    child.toString instanceof Function)) {
                 this.renderer.innerHTML = child.toString();
                 this.append(parent, ...this.renderer.childNodes);
             }
@@ -2094,7 +2224,7 @@ let Helper = class Helper extends Class.Null {
      * @throws Throws an error when the specified element has no parent.
      */
     static unwrap(element) {
-        const parent = element.parentElement;
+        const parent = element.parentNode;
         if (!parent) {
             throw new Error(`The specified element has no parent.`);
         }
@@ -2195,7 +2325,7 @@ Helper.eventMap = [
     'onwaiting',
     // Misc events
     'ontoggle',
-    'onslotchange'
+    'onslotchange',
 ];
 /**
  * Renderer for temp elements.
@@ -2240,7 +2370,7 @@ Helper = __decorate([
 exports.Helper = Helper;
 
 }},
-"@singleware/jsx/helpers/common":{pack:false, invoke:function(exports, require){
+"@singleware/jsx/helpers/common":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -2290,23 +2420,25 @@ Common = __decorate([
 exports.Common = Common;
 
 }},
-"@singleware/jsx/helpers/index":{pack:false, invoke:function(exports, require){
+"@singleware/jsx/helpers/index":{pack:false, invoke:function(module, exports, require){
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 /*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
+Object.defineProperty(exports, "__esModule", { value: true });
+// Imported aliases.
 const Browser = require("./browser");
-exports.Browser = Browser.Helper;
 const Text = require("./text");
+// Exported aliases.
+exports.Browser = Browser.Helper;
 exports.Text = Text.Helper;
 
 }},
-"@singleware/jsx/helpers":{pack:true, invoke:function(exports, require){
-Object.assign(exports, require('index'));
+"@singleware/jsx/helpers":{pack:true, invoke:function(module, exports, require){
+Object.assign(exports, require('./index'));
 }},
-"@singleware/jsx/helpers/text":{pack:false, invoke:function(exports, require){
+"@singleware/jsx/helpers/text":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -2478,7 +2610,7 @@ Helper = __decorate([
 exports.Helper = Helper;
 
 }},
-"@singleware/jsx/index":{pack:false, invoke:function(exports, require){
+"@singleware/jsx/index":{pack:false, invoke:function(module, exports, require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 /**
@@ -2534,10 +2666,10 @@ exports.childOf = (parent, node) => Helper.childOf(parent, node);
 exports.escape = (input) => Helper.escape(input);
 
 }},
-"@singleware/jsx":{pack:true, invoke:function(exports, require){
-Object.assign(exports, require('index'));
+"@singleware/jsx":{pack:true, invoke:function(module, exports, require){
+Object.assign(exports, require('./index'));
 }},
-"@singleware/path/helper":{pack:false, invoke:function(exports, require){
+"@singleware/path/helper":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -2674,7 +2806,7 @@ Helper = __decorate([
 exports.Helper = Helper;
 
 }},
-"@singleware/path/index":{pack:false, invoke:function(exports, require){
+"@singleware/path/index":{pack:false, invoke:function(module, exports, require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 /*
@@ -2720,12 +2852,13 @@ exports.basename = (path) => helper_1.Helper.basename(path);
 exports.extname = (path) => helper_1.Helper.extname(path);
 
 }},
-"@singleware/path":{pack:true, invoke:function(exports, require){
-Object.assign(exports, require('index'));
+"@singleware/path":{pack:true, invoke:function(module, exports, require){
+Object.assign(exports, require('./index'));
 }},
-"source/aliases":{pack:false, invoke:function(exports, require){
+"source/aliases":{pack:false, invoke:function(module, exports, require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Match = void 0;
 /*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
@@ -2737,17 +2870,75 @@ const Application = require("@singleware/application");
 exports.Match = Application.Match;
 //# sourceMappingURL=aliases.js.map
 }},
-"source/index":{pack:false, invoke:function(exports, require){
+"source/helper":{pack:false, invoke:function(module, exports, require){
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Helper = void 0;
+/*!
+ * Copyright (C) 2018-2019 Silas B. Domingos
+ * This source code is licensed under the MIT License as described in the file LICENSE.
+ */
+const Class = require("@singleware/class");
+/**
+ * Request helper class.
+ */
+let Helper = class Helper extends Class.Null {
+    /**
+     * Get a new map containing all search parameters from the specified search string.
+     * @param search Search string.
+     * @returns Returns the new map.
+     */
+    static parseURLSearch(search) {
+        const map = {};
+        for (const entry of search.split('&')) {
+            const [key, value] = entry.split('=');
+            const name = key.trim();
+            if (name.length > 0) {
+                const decoded = decodeURIComponent(value.trim());
+                const current = map[name];
+                if (current !== void 0) {
+                    if (current instanceof Array) {
+                        current.push(decoded || true);
+                    }
+                    else {
+                        map[name] = [current, decoded || true];
+                    }
+                }
+                else {
+                    map[name] = decoded || true;
+                }
+            }
+        }
+        return map;
+    }
+};
+__decorate([
+    Class.Public()
+], Helper, "parseURLSearch", null);
+Helper = __decorate([
+    Class.Describe()
+], Helper);
+exports.Helper = Helper;
+//# sourceMappingURL=helper.js.map
+}},
+"source/index":{pack:false, invoke:function(module, exports, require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Services = exports.Processor = exports.Filter = void 0;
 /*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 var main_1 = require("./main");
-exports.Main = main_1.Main;
+Object.defineProperty(exports, "Main", { enumerable: true, get: function () { return main_1.Main; } });
 var aliases_1 = require("./aliases");
-exports.Match = aliases_1.Match;
+Object.defineProperty(exports, "Match", { enumerable: true, get: function () { return aliases_1.Match; } });
 // Declarations.
 const Application = require("@singleware/application");
 /**
@@ -2770,10 +2961,10 @@ const Services = require("./services");
 exports.Services = Services;
 //# sourceMappingURL=index.js.map
 }},
-"source":{pack:true, invoke:function(exports, require){
-Object.assign(exports, require('index'));
+"source":{pack:true, invoke:function(module, exports, require){
+Object.assign(exports, require('./index'));
 }},
-"source/main":{pack:false, invoke:function(exports, require){
+"source/main":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -2782,6 +2973,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Main = void 0;
 /*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
@@ -2915,7 +3107,7 @@ Main = __decorate([
 exports.Main = Main;
 //# sourceMappingURL=main.js.map
 }},
-"source/services/client":{pack:false, invoke:function(exports, require){
+"source/services/client":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -2924,12 +3116,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Client = void 0;
 /*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 const Class = require("@singleware/class");
 const Observable = require("@singleware/observable");
+const helper_1 = require("../helper");
 const navigator_1 = require("./navigator");
 /**
  * Front-end client class.
@@ -2954,7 +3148,7 @@ let Client = class Client extends Class.Null {
          */
         this.errorSubject = new Observable.Subject();
         this.settings = settings;
-        this.navigation = new navigator_1.Navigator(this, this.settings.path || location.pathname);
+        this.navigation = new navigator_1.Navigator(this, settings.path || location.pathname, settings.search || helper_1.Helper.parseURLSearch(document.location.search.substr(1)));
     }
     /**
      * Gets the current opened path.
@@ -3039,7 +3233,7 @@ Client = __decorate([
 exports.Client = Client;
 //# sourceMappingURL=client.js.map
 }},
-"source/services/index":{pack:false, invoke:function(exports, require){
+"source/services/index":{pack:false, invoke:function(module, exports, require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 /*!
@@ -3047,15 +3241,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 var client_1 = require("./client");
-exports.Client = client_1.Client;
+Object.defineProperty(exports, "Client", { enumerable: true, get: function () { return client_1.Client; } });
 var navigator_1 = require("./navigator");
-exports.Navigator = navigator_1.Navigator;
+Object.defineProperty(exports, "Navigator", { enumerable: true, get: function () { return navigator_1.Navigator; } });
 //# sourceMappingURL=index.js.map
 }},
-"source/services":{pack:true, invoke:function(exports, require){
-Object.assign(exports, require('index'));
+"source/services":{pack:true, invoke:function(module, exports, require){
+Object.assign(exports, require('./index'));
 }},
-"source/services/navigator":{pack:false, invoke:function(exports, require){
+"source/services/navigator":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -3064,12 +3258,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Navigator = void 0;
 /*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
  */
 const Class = require("@singleware/class");
 const Path = require("@singleware/path");
+const helper_1 = require("../helper");
 /**
  * Front-end navigator class.
  */
@@ -3078,22 +3274,27 @@ let Navigator = class Navigator extends Class.Null {
      * Default constructor.
      * @param client Client instance.
      * @param path Initial path.
+     * @param search Initial search.
      */
-    constructor(client, path) {
+    constructor(client, path, search) {
         super();
-        globalThis.addEventListener('popstate', this.popStateHandler.bind(this));
         this.client = client;
-        this.current = path;
+        this.currentPath = path;
+        this.currentSearch = search || {};
+        globalThis.addEventListener('popstate', this.popStateHandler.bind(this));
     }
     /**
      * Renders the specified path according to the given state.
      * @param path Path to be rendered.
+     * @param search Search arguments.
      * @param state Determines whether the renderer will preserves the current state.
      */
-    renderPath(path, state) {
+    renderPath(path, search, state) {
         this.client.onReceive.notifyAll({
             path: path,
-            input: {},
+            input: {
+                search: search
+            },
             output: {},
             environment: {
                 local: {
@@ -3108,28 +3309,37 @@ let Navigator = class Navigator extends Class.Null {
      * Pop State, event handler.
      */
     popStateHandler() {
-        this.current = document.location.pathname;
-        this.renderPath(document.location.pathname, false);
+        this.currentPath = document.location.pathname;
+        this.currentSearch = helper_1.Helper.parseURLSearch(document.location.search.substr(1));
+        this.renderPath(this.currentPath, this.currentSearch, false);
     }
     /**
      * Gets the current path.
      */
     get path() {
-        return this.current;
+        return this.currentPath;
+    }
+    /**
+     * Gets the current search.
+     */
+    get search() {
+        return this.currentSearch;
     }
     /**
      * Opens the specified path.
      * @param path Path to be opened.
+     * @param search Search arguments.
      */
-    open(path) {
-        this.current = Path.resolve(Path.dirname(this.current), path);
-        this.renderPath(this.current, true);
+    open(path, search) {
+        this.currentPath = Path.resolve(Path.dirname(this.currentPath), path);
+        this.currentSearch = search || {};
+        this.renderPath(this.currentPath, this.currentSearch, true);
     }
     /**
      * Reopens the current path.
      */
     reload() {
-        this.renderPath(this.current, false);
+        this.renderPath(this.currentPath, this.currentSearch, false);
     }
 };
 __decorate([
@@ -3137,7 +3347,10 @@ __decorate([
 ], Navigator.prototype, "client", void 0);
 __decorate([
     Class.Private()
-], Navigator.prototype, "current", void 0);
+], Navigator.prototype, "currentPath", void 0);
+__decorate([
+    Class.Private()
+], Navigator.prototype, "currentSearch", void 0);
 __decorate([
     Class.Private()
 ], Navigator.prototype, "renderPath", null);
@@ -3147,6 +3360,9 @@ __decorate([
 __decorate([
     Class.Public()
 ], Navigator.prototype, "path", null);
+__decorate([
+    Class.Public()
+], Navigator.prototype, "search", null);
 __decorate([
     Class.Public()
 ], Navigator.prototype, "open", null);
@@ -3159,7 +3375,7 @@ Navigator = __decorate([
 exports.Navigator = Navigator;
 //# sourceMappingURL=navigator.js.map
 }},
-"./browser":{pack:false, invoke:function(exports, require){
+"./browser":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -3204,7 +3420,7 @@ Example = __decorate([
 const instance = new Example();
 //# sourceMappingURL=browser.js.map
 }},
-"./handler":{pack:false, invoke:function(exports, require){
+"./handler":{pack:false, invoke:function(module, exports, require){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -3213,6 +3429,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Handler = void 0;
 /*!
  * Copyright (C) 2018-2019 Silas B. Domingos
  * This source code is licensed under the MIT License as described in the file LICENSE.
@@ -3282,102 +3499,5 @@ Handler = __decorate([
 ], Handler);
 exports.Handler = Handler;
 //# sourceMappingURL=handler.js.map
-}}};
-
-  /**
-   * Determines whether the specified path is relative or not.
-   * @param path Path.
-   * @returns Returns the base path.
-   */
-  function relative(path) {
-    return path[0] !== '/' && path[0] !== '@';
-  }
-
-  /**
-   * Gets the directory name of the specified path.
-   * @param path Path of extraction.
-   * @returns Returns the directory name.
-   */
-  function dirname(path) {
-    const output = normalize(path).split('/');
-    return output.splice(0, output.length - 1).join('/');
-  }
-
-  /**
-   * Gets the normalized path from the specified path.
-   * @param path Path to be normalized.
-   * @return Returns the normalized path.
-   */
-  function normalize(path) {
-    const input = path.split('/');
-    const output = [];
-    for (let i = 0; i < input.length; ++i) {
-      const directory = input[i];
-      if (i === 0 || (directory.length && directory !== '.')) {
-        if (directory === '..') {
-          output.pop();
-        } else {
-          output.push(directory);
-        }
-      }
-    }
-    return output.join('/');
-  }
-
-  /**
-   * Loads the module that corresponds to the specified location.
-   * @param location Module location.
-   * @returns Returns all exported members.
-   */
-  function loadModule(location) {
-    const module = repository[location];
-    const current = Loader.baseDirectory;
-    const exports = {};
-    let caught;
-    try {
-      Loader.baseDirectory = module.pack ? location : dirname(location);
-      loading.push(location);
-      module.invoke(exports, require);
-    } catch (exception) {
-      caught = exception;
-    } finally {
-      Loader.baseDirectory = current;
-      loading.pop();
-      if (caught) {
-        throw caught;
-      }
-      return exports;
-    }
-  }
-
-  /**
-   * Requires the module that corresponds to the specified path.
-   * @param path Module path.
-   * @returns Returns all exported members.
-   * @throws Throws an error when the specified module does not exists.
-   */
-  function require(path) {
-    const location = normalize(relative(path) ? `${Loader.baseDirectory}/${path}` : path);
-    if (!cache[location]) {
-      const current = loading[loading.length - 1] || '.';
-      if (!repository[location]) {
-        throw new Error(`Module "${path}" loaded by "${current}" does not found.`);
-      }
-      if (loading.includes(location)) {
-        throw new Error(`Module "${current}" with circular reference to module "${path}"`);
-      }
-      cache[location] = loadModule(location);
-    }
-    return cache[location];
-  }
-
-  /**
-   * Global base directory.
-   */
-  Loader.baseDirectory = '.';
-
-  // Setups the require method.
-  if (!window.require) {
-    window.require = require;
-  }
+}}});
 })(Loader || (Loader = {}));
